@@ -1,0 +1,51 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       leavup
+      POSTGRES_USER:     conges
+      POSTGRES_PASSWORD: conges_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL:      postgresql://conges:conges_password@postgres:5432/leavup
+      JWT_SECRET:        change_this_to_a_long_random_string_in_production
+      SUPER_PASSWORD:    superadmin
+      PORT:              3000
+      FRONTEND_URL:      http://localhost:5173
+      PLATFORM_DOMAIN:   leavup.com
+      # Chiffrement AES-256-GCM des données personnelles (générer avec : node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
+      ENCRYPTION_KEY:    b779e1aaa2149dfa85462c62472d8a895d898c292c956636d3920592bfca1c06
+      HMAC_KEY:          8aa90a4616f9a570a5bf8040980fb4a07b6fcfa1df37c8a49d3801e1bfc3588a
+      # SMTP — configurable aussi depuis le panneau Super Admin
+      # SMTP_HOST:       smtp.gmail.com
+      # SMTP_PORT:       587
+      # SMTP_SECURE:     false
+      # SMTP_USER:       noreply@leavup.com
+      # SMTP_PASS:       your_app_password
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+
+volumes:
+  pgdata:
