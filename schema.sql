@@ -125,6 +125,37 @@ ALTER TABLE organizations ADD COLUMN IF NOT EXISTS notify_on_approve BOOLEAN NOT
 ALTER TABLE organizations ADD COLUMN IF NOT EXISTS notify_on_reject  BOOLEAN NOT NULL DEFAULT true;
 ALTER TABLE organizations ADD COLUMN IF NOT EXISTS notify_admin_new  BOOLEAN NOT NULL DEFAULT true;
 
+-- ── Plan / tarification ─────────────────────────────────────────────────────
+-- free : 1 admin + 4 employés (5 max) — pro : illimité (activé par superadmin)
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS plan TEXT NOT NULL DEFAULT 'free' CHECK (plan IN ('free', 'pro'));
+
+-- ── Période de référence des congés ─────────────────────────────────────────
+-- civil     : 1er janvier → 31 décembre
+-- reference : 1er juin    → 31 mai (période légale française)
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS leave_period TEXT NOT NULL DEFAULT 'civil'
+  CHECK (leave_period IN ('civil', 'reference'));
+
+-- ── Mode d'attribution des congés ───────────────────────────────────────────
+-- progressive : les jours s'accumulent au fil des mois (2,08 j/mois)
+-- advance     : tous les jours sont crédités dès le début de la période
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS leave_grant_mode TEXT NOT NULL DEFAULT 'progressive'
+  CHECK (leave_grant_mode IN ('progressive', 'advance'));
+
+-- ── Équipes ─────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS teams (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id      UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  name        TEXT NOT NULL,
+  leader_id   UUID REFERENCES users(id) ON DELETE SET NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(org_id, name)
+);
+CREATE INDEX IF NOT EXISTS idx_teams_org    ON teams(org_id);
+CREATE INDEX IF NOT EXISTS idx_teams_leader ON teams(leader_id);
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS team_id UUID REFERENCES teams(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_users_team ON users(team_id);
+
 -- ── Paramètres plateforme (config SMTP, etc.) ────────────────────────────────
 CREATE TABLE IF NOT EXISTS platform_settings (
   key   TEXT PRIMARY KEY,

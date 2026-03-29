@@ -133,6 +133,40 @@ npm run dev    # Vite sur http://localhost:5173
 | PUT     | /api/settings     | Modifier paramètres (admin)    |
 | PUT     | /api/settings/logo| Changer logo et taille (admin) |
 
+## Tests automatisés
+
+Les deux projets (backend et frontend) utilisent **Vitest**.
+
+### Via Docker (recommandé — aucune dépendance locale requise)
+
+```bash
+# Backend (43 tests d'intégration)
+docker exec leavup-backend-1 npx vitest run
+
+# Frontend (tests composants React)
+docker exec leavup-frontend-1 npx vitest run
+```
+
+### En développement local
+
+```bash
+# Backend
+cd backend
+npm test              # exécution unique
+npm run test:watch    # mode watch (relance à chaque modification)
+npm run test:coverage # rapport de couverture
+
+# Frontend
+cd frontend
+npm test
+npm run test:watch
+npm run test:coverage
+```
+
+> Les tests backend utilisent des mocks pg/nodemailer — aucune base de données réelle nécessaire.
+
+---
+
 ## Déploiement NAS Synology
 
 Utiliser `docker-compose.synology.yml` — voir le fichier pour les instructions.

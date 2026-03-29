@@ -28,6 +28,7 @@ services:
       PORT:              3000
       FRONTEND_URL:      http://localhost:5173
       PLATFORM_DOMAIN:   leavup.com
+      HTTPS_COOKIES:     "false"   # passer à "true" si le frontend est servi en HTTPS
       # Chiffrement AES-256-GCM des données personnelles (générer avec : node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
       ENCRYPTION_KEY:    b779e1aaa2149dfa85462c62472d8a895d898c292c956636d3920592bfca1c06
       HMAC_KEY:          8aa90a4616f9a570a5bf8040980fb4a07b6fcfa1df37c8a49d3801e1bfc3588a
@@ -37,6 +38,9 @@ services:
       # SMTP_SECURE:     false
       # SMTP_USER:       noreply@leavup.com
       # SMTP_PASS:       your_app_password
+    volumes:
+      - backend_certs:/app/certs
+
   frontend:
     build:
       context: ./frontend
@@ -49,3 +53,4 @@ services:
 
 volumes:
   pgdata:
+  backend_certs:   # certificats TLS internes backend ↔ nginx

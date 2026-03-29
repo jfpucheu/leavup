@@ -3,13 +3,12 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 // ── API helper ─────────────────────────────────────────────────────────────
 const BASE = '/api';
 
-async function api(method, path, body, token) {
+async function api(method, path, body, _token) {
+  // _token ignoré — authentification via cookie HttpOnly (Set-Cookie par le backend)
   const opts = {
     method,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
     ...(body ? { body: JSON.stringify(body) } : {}),
   };
   const res = await fetch(BASE + path, opts);
@@ -21,15 +20,15 @@ async function api(method, path, body, token) {
   return data;
 }
 
-// ── Auth context (token dans localStorage) ─────────────────────────────────
+// ── Auth context (métadonnées en sessionStorage — token uniquement en cookie HttpOnly) ──
 function loadSession() {
   try {
-    const raw = localStorage.getItem('conges_session');
+    const raw = sessionStorage.getItem('leavup_session');
     return raw ? JSON.parse(raw) : null;
   } catch { return null; }
 }
-function saveSession(s) { localStorage.setItem('conges_session', JSON.stringify(s)); }
-function clearSession() { localStorage.removeItem('conges_session'); }
+function saveSession(s) { sessionStorage.setItem('leavup_session', JSON.stringify(s)); }
+function clearSession() { sessionStorage.removeItem('leavup_session'); }
 
 // ── Utilitaires ────────────────────────────────────────────────────────────
 function workDays(start, end) {
@@ -72,10 +71,68 @@ const C = {
 const CARD = {
   background: C.bgCard,
   border: `1px solid ${C.border}`,
-  borderRadius: 14,
-  padding: '1rem 1.25rem',
-  boxShadow: '0 1px 4px rgba(15,23,42,0.06)',
+  borderRadius: 16,
+  padding: '1.25rem 1.5rem',
+  boxShadow: '0 2px 8px rgba(15,23,42,0.07)',
 };
+
+// ── Styles globaux — injectés une seule fois ────────────────────────────────
+const GLOBAL_CSS = `
+  *, *::before, *::after { box-sizing: border-box; }
+
+  /* ── Champs de formulaire ─────────────────────────────────────────────── */
+  input:not([type=checkbox]):not([type=radio]):not([type=file]),
+  select,
+  textarea {
+    font-family: inherit;
+    font-size: 14px;
+    color: #0f172a;
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+    line-height: 1.5;
+  }
+  input:not([type=checkbox]):not([type=radio]):not([type=file]):hover,
+  select:hover,
+  textarea:hover { border-color: #cbd5e1; background: #fafcff; }
+
+  input:not([type=checkbox]):not([type=radio]):not([type=file]):focus,
+  select:focus,
+  textarea:focus {
+    border-color: #0ea5e9;
+    box-shadow: 0 0 0 3px rgba(14,165,233,0.14);
+    background: #ffffff;
+  }
+  input:not([type=checkbox]):not([type=radio]):not([type=file])::placeholder,
+  textarea::placeholder { color: #94a3b8; }
+
+  input[disabled]:not([type=checkbox]):not([type=radio]),
+  select[disabled],
+  textarea[disabled] { opacity: 0.55; cursor: not-allowed; background: #f1f5f9; }
+
+  select {
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7' fill='none' viewBox='0 0 12 7'%3E%3Cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+  }
+  textarea { resize: vertical; min-height: 76px; }
+
+  /* ── Animations ──────────────────────────────────────────────────────── */
+  @keyframes spin     { to { transform: rotate(360deg); } }
+  @keyframes modal-in { from { opacity:0; transform:translateY(-10px) scale(0.97); } to { opacity:1; transform:none; } }
+  @keyframes fade-in  { from { opacity:0; } to { opacity:1; } }
+`;
+
+function GlobalStyle() {
+  return <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />;
+}
 
 // ── Composants UI ──────────────────────────────────────────────────────────
 function Badge({ s }) {
@@ -115,11 +172,17 @@ function Btn({ children, onClick, variant='primary', disabled, full, small, styl
   );
 }
 
-function Field({ label, children }) {
+function Field({ label, hint, children }) {
   return (
-    <div style={{ marginBottom: 14 }}>
-      <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 5, fontWeight: 500 }}>{label}</div>
+    <div style={{ marginBottom: 16 }}>
+      <label style={{
+        display: 'block', fontSize: 12, fontWeight: 600,
+        color: C.textMuted, marginBottom: 6, letterSpacing: '0.02em',
+      }}>
+        {label}
+      </label>
       {children}
+      {hint && <div style={{ fontSize: 11, color: C.textHint, marginTop: 5 }}>{hint}</div>}
     </div>
   );
 }
@@ -168,7 +231,6 @@ function Spinner() {
         border: `3px solid ${C.border}`, borderTopColor: C.blue,
         animation: 'spin 0.7s linear infinite',
       }} />
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
@@ -176,21 +238,70 @@ function Spinner() {
 function Modal({ title, onClose, children }) {
   return (
     <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
+      position: 'fixed', inset: 0,
+      background: 'rgba(15,23,42,0.45)',
+      backdropFilter: 'blur(4px)',
+      WebkitBackdropFilter: 'blur(4px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: '1rem', zIndex: 200,
     }}>
-      <div style={{ ...CARD, width: '100%', maxWidth: 420, maxHeight: '90vh', overflowY: 'auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <h3 style={{ fontSize: 15, fontWeight: 600, color: C.text }}>{title}</h3>
+      <div style={{
+        ...CARD, width: '100%', maxWidth: 440, maxHeight: '90vh', overflowY: 'auto',
+        boxShadow: '0 24px 64px rgba(15,23,42,0.22)',
+        animation: 'modal-in 0.18s ease-out',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <h3 style={{ fontSize: 16, fontWeight: 700, color: C.text, letterSpacing: '-0.01em' }}>{title}</h3>
           <button onClick={onClose} style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            fontSize: 20, color: C.textMuted, lineHeight: 1,
+            background: C.bgSecond, border: `1px solid ${C.border}`,
+            borderRadius: 8, cursor: 'pointer',
+            width: 30, height: 30, fontSize: 17, color: C.textMuted,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
           }}>×</button>
         </div>
         {children}
       </div>
     </div>
+  );
+}
+
+const CONTACT_EMAIL = 'contact@leavup.com';
+
+function ContactModal({ subject, onClose }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    navigator.clipboard.writeText(CONTACT_EMAIL).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+  return (
+    <Modal title="Nous contacter" onClose={onClose}>
+      <p style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.6, marginBottom: 16 }}>
+        Pour en savoir plus sur ce plan, écrivez-nous à :
+      </p>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10,
+        background: C.bgSecond, borderRadius: 10, padding: '10px 14px',
+        border: `1px solid ${C.border}`, marginBottom: 20,
+      }}>
+        <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: C.text }}>
+          {CONTACT_EMAIL}
+        </span>
+        <button onClick={copy} style={{
+          border: 'none', borderRadius: 7, cursor: 'pointer',
+          background: copied ? '#dcfce7' : C.blueLight,
+          color: copied ? '#16a34a' : C.blue,
+          fontWeight: 600, fontSize: 12, padding: '5px 12px',
+          transition: 'background 0.2s, color 0.2s',
+        }}>
+          {copied ? '✓ Copié' : 'Copier'}
+        </button>
+      </div>
+      <p style={{ fontSize: 12, color: C.textHint }}>
+        Objet suggéré : <em>{subject}</em>
+      </p>
+    </Modal>
   );
 }
 
@@ -294,151 +405,495 @@ function ResetPasswordScreen({ token, onDone }) {
 }
 
 // ── Écran de connexion ─────────────────────────────────────────────────────
-function LoginScreen({ onLogin }) {
-  const subdomainSlug = detectSubdomain();
-  // Si sous-domaine détecté → aller directement aux credentials
-  const [step, setStep]       = useState(subdomainSlug ? 'creds' : 'org');
-  const [orgSlug, setOrgSlug] = useState(subdomainSlug || '');
-  const [id, setId]           = useState('');
-  const [pwd, setPwd]         = useState('');
-  const [err, setErr]         = useState('');
+// ── Landing page marketing ──────────────────────────────────────────────────
+function PricingSection({ onRegister }) {
+  const [annual, setAnnual] = useState(false);
+  const [contactSubject, setContactSubject] = useState(null);
+
+  const plans = [
+    {
+      name: 'Starter', color: null, price: 0, priceAnnual: 0, period: 'gratuit pour toujours',
+      users: "jusqu'à 10 utilisateurs",
+      features: ['Demandes & validation', 'Planning visuel', 'Notifications email'],
+      cta: 'Démarrer gratuitement', onCta: onRegister, ctaBg: '#0f172a',
+    },
+    {
+      name: 'Teams', color: 'gradient', price: 39, priceAnnual: 31, period: '/mois',
+      users: "jusqu'à 30 utilisateurs",
+      features: ['Tout Starter', 'Équipes & délégation', 'Historique illimité', 'Export CSV', 'Support email'],
+      badge: 'Populaire', cta: 'Contactez-nous',
+      onCta: () => setContactSubject('Leavup Teams'),
+      ctaBg: '#0ea5e9',
+    },
+    {
+      name: 'Enterprise', color: 'dark', price: null, priceAnnual: null, period: null,
+      users: '30+ utilisateurs',
+      features: ['Tout Teams', 'Intégration SIRH', 'SSO / SAML', 'Hébergement dédié', 'Contrat sur-mesure'],
+      cta: 'Contactez-nous',
+      onCta: () => setContactSubject('Leavup Enterprise'),
+      ctaBg: '#0ea5e9',
+    },
+  ];
+
+  const priceLabel = (p) => {
+    if (p.price === null) return null;
+    if (p.price === 0) return '0 €';
+    return `${annual ? p.priceAnnual : p.price} €`;
+  };
+
+  return (
+    <>
+      {/* Toggle mensuel / annuel */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 40 }}>
+        <span style={{ fontSize: 13, color: annual ? '#94a3b8' : '#0f172a', fontWeight: annual ? 400 : 600 }}>Mensuel</span>
+        <div onClick={() => setAnnual(a => !a)} style={{
+          width: 44, height: 24, borderRadius: 12, background: annual ? '#0ea5e9' : '#cbd5e1',
+          cursor: 'pointer', position: 'relative', transition: 'background .2s', flexShrink: 0,
+        }}>
+          <div style={{
+            position: 'absolute', top: 3, left: annual ? 23 : 3,
+            width: 18, height: 18, borderRadius: '50%', background: 'white',
+            transition: 'left .2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+          }} />
+        </div>
+        <span style={{ fontSize: 13, color: annual ? '#0f172a' : '#94a3b8', fontWeight: annual ? 600 : 400 }}>
+          Annuel{' '}
+          <span style={{ background: '#dcfce7', color: '#16a34a', borderRadius: 10, padding: '1px 7px', fontSize: 11, fontWeight: 700 }}>-20%</span>
+        </span>
+      </div>
+
+      {/* Cards */}
+      <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap', maxWidth: 1100, margin: '0 auto' }}>
+        {plans.map(p => {
+          const isDark = p.color === 'gradient' || p.color === 'dark';
+          const bg = p.color === 'gradient' ? 'linear-gradient(135deg,#0f172a,#1d4ed8)'
+                   : p.color === 'dark'     ? '#0f172a'
+                   : 'white';
+          const pl = priceLabel(p);
+          return (
+            <div key={p.name} style={{
+              background: bg, borderRadius: 20, padding: '28px 24px',
+              border: p.color ? 'none' : '2px solid #e2e8f0',
+              flex: '1 1 180px', maxWidth: 210,
+              position: 'relative', display: 'flex', flexDirection: 'column',
+            }}>
+              {p.badge && (
+                <div style={{ position: 'absolute', top: 14, right: 14, background: '#0ea5e9', borderRadius: 20, padding: '2px 10px', fontSize: 10, fontWeight: 700, color: 'white' }}>
+                  {p.badge}
+                </div>
+              )}
+              <div style={{ fontSize: 12, fontWeight: 700, color: isDark ? 'rgba(255,255,255,0.5)' : '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                {p.name}
+              </div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: isDark ? '#7dd3fc' : '#0ea5e9', marginBottom: 10 }}>
+                {p.users}
+              </div>
+              {pl !== null ? (
+                <>
+                  <div style={{ fontSize: 34, fontWeight: 800, color: isDark ? 'white' : '#0f172a', lineHeight: 1 }}>{pl}</div>
+                  <div style={{ fontSize: 11, color: isDark ? 'rgba(255,255,255,0.4)' : '#94a3b8', marginBottom: 18, marginTop: 3 }}>
+                    {p.price === 0 ? p.period : `${p.period}${annual ? ' · facturé annuellement' : ''}`}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: 'white', lineHeight: 1 }}>Sur devis</div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginBottom: 18, marginTop: 3 }}>contactez-nous</div>
+                </>
+              )}
+              <div style={{ flex: 1 }}>
+                {p.features.map(f => (
+                  <div key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 12, color: isDark ? 'rgba(255,255,255,0.8)' : '#334155', marginBottom: 8 }}>
+                    <span style={{ color: isDark ? '#38bdf8' : '#22c55e', fontWeight: 700, flexShrink: 0 }}>✓</span> {f}
+                  </div>
+                ))}
+              </div>
+              <button onClick={p.onCta} style={{
+                width: '100%', marginTop: 20, border: 'none', color: 'white',
+                borderRadius: 10, padding: '11px', fontSize: 13, cursor: 'pointer',
+                fontWeight: 700, background: p.ctaBg,
+              }}>{p.cta}</button>
+            </div>
+          );
+        })}
+      </div>
+      {contactSubject && <ContactModal subject={contactSubject} onClose={() => setContactSubject(null)} />}
+    </>
+  );
+}
+
+function LandingPage({ onLogin, onRegister, onPrivacy }) {
+  const GRAD = 'linear-gradient(160deg, #0f172a 0%, #1e3a8a 60%, #0ea5e9 100%)';
+  const features = [
+    { icon: '📅', title: 'Demandes en ligne', desc: 'Vos salariés posent leurs absences depuis n\'importe où, en quelques clics.' },
+    { icon: '✅', title: 'Validation rapide', desc: 'Approuvez ou refusez en un clic. Notifications email automatiques.' },
+    { icon: '📊', title: 'Planning visuel', desc: 'Visualisez toutes les absences de votre équipe sur un calendrier partagé.' },
+    { icon: '👥', title: 'Gestion d\'équipes', desc: 'Déléguez la validation des congés à des chefs d\'équipe.' },
+  ];
+  return (
+    <div style={{ fontFamily: '-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif', background: '#fff', minHeight: '100vh' }}>
+      {/* Navbar */}
+      <nav style={{
+        background: GRAD, padding: '0 24px', height: 60,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        position: 'sticky', top: 0, zIndex: 100,
+      }}>
+        <span style={{ fontSize: 22, fontWeight: 800, color: 'white', letterSpacing: '-0.04em' }}>
+          Leav<span style={{ color: '#38bdf8' }}>up</span>
+        </span>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={onLogin} style={{
+            background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)',
+            color: 'white', borderRadius: 8, padding: '8px 18px', fontSize: 13,
+            cursor: 'pointer', fontWeight: 600, backdropFilter: 'blur(4px)',
+          }}>Connexion</button>
+          <button onClick={onRegister} style={{
+            background: '#0ea5e9', border: 'none', color: 'white',
+            borderRadius: 8, padding: '8px 18px', fontSize: 13,
+            cursor: 'pointer', fontWeight: 700,
+          }}>Essai gratuit</button>
+        </div>
+      </nav>
+
+      {/* Hero */}
+      <section style={{ background: GRAD, padding: '72px 24px 80px', textAlign: 'center' }}>
+        <div style={{
+          display: 'inline-block', background: 'rgba(14,165,233,0.18)',
+          border: '1px solid rgba(56,189,248,0.35)', borderRadius: 20,
+          color: '#7dd3fc', fontSize: 12, fontWeight: 700, padding: '5px 14px', marginBottom: 24,
+          letterSpacing: '0.05em', textTransform: 'uppercase',
+        }}>Gratuit jusqu'à 10 utilisateurs</div>
+        <h1 style={{
+          fontSize: 42, fontWeight: 800, color: 'white', letterSpacing: '-0.04em',
+          maxWidth: 620, margin: '0 auto 18px', lineHeight: 1.15,
+        }}>La gestion des absences simplifiée pour votre équipe</h1>
+        <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.72)', maxWidth: 480, margin: '0 auto 36px', lineHeight: 1.6 }}>
+          Planifiez, validez et suivez les congés de vos employés — sans paperasse, sans tableur Excel.
+        </p>
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <button onClick={onRegister} style={{
+            background: '#0ea5e9', border: 'none', color: 'white',
+            borderRadius: 10, padding: '14px 28px', fontSize: 15,
+            cursor: 'pointer', fontWeight: 700, boxShadow: '0 4px 16px rgba(14,165,233,0.4)',
+          }}>Commencer gratuitement →</button>
+          <button onClick={onLogin} style={{
+            background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.25)',
+            color: 'white', borderRadius: 10, padding: '14px 28px', fontSize: 15,
+            cursor: 'pointer', fontWeight: 600, backdropFilter: 'blur(4px)',
+          }}>Se connecter</button>
+        </div>
+
+        {/* Trust bar */}
+        <div style={{ display: 'flex', gap: 28, justifyContent: 'center', flexWrap: 'wrap', marginTop: 36 }}>
+          {[
+            { icon: '🇫🇷', label: 'Hébergé en France' },
+            { icon: '🇫🇷', label: 'Développé en France' },
+            { icon: '🔒', label: 'Données personnelles chiffrées' },
+            { icon: '🛡️', label: 'Conforme RGPD' },
+          ].map(({ icon, label }) => (
+            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 7, color: 'rgba(255,255,255,0.75)', fontSize: 13 }}>
+              <span style={{ fontSize: 18 }}>{icon}</span>
+              <span style={{ fontWeight: 500 }}>{label}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Features */}
+      <section style={{ padding: '64px 24px', maxWidth: 960, margin: '0 auto' }}>
+        <h2 style={{ textAlign: 'center', fontSize: 26, fontWeight: 800, color: '#0f172a', marginBottom: 48, letterSpacing: '-0.03em' }}>
+          Tout ce dont vous avez besoin
+        </h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(210px,1fr))', gap: 24 }}>
+          {features.map(f => (
+            <div key={f.title} style={{
+              background: '#f8fafc', borderRadius: 16, padding: '28px 24px',
+              border: '1px solid #e2e8f0',
+            }}>
+              <div style={{ fontSize: 32, marginBottom: 12 }}>{f.icon}</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 8 }}>{f.title}</div>
+              <div style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6 }}>{f.desc}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Pricing */}
+      <section style={{ background: '#f8fafc', padding: '64px 24px' }}>
+        <h2 style={{ textAlign: 'center', fontSize: 26, fontWeight: 800, color: '#0f172a', marginBottom: 8, letterSpacing: '-0.03em' }}>
+          Des tarifs simples et transparents
+        </h2>
+        <p style={{ textAlign: 'center', fontSize: 14, color: '#64748b', marginBottom: 48 }}>
+          Pas de coût par utilisateur — un forfait fixe selon la taille de votre équipe.
+        </p>
+        <PricingSection onRegister={onRegister} />
+      </section>
+
+      {/* Footer */}
+      <footer style={{ background: '#0f172a', padding: '28px 24px', textAlign: 'center' }}>
+        <span style={{ fontSize: 18, fontWeight: 800, color: 'white', letterSpacing: '-0.03em' }}>
+          Leav<span style={{ color: '#38bdf8' }}>up</span>
+        </span>
+        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', marginTop: 8 }}>
+          © {new Date().getFullYear()} Leavup — Gestion des absences simplifiée
+        </p>
+        <p style={{ marginTop: 6 }}>
+          <button onClick={onPrivacy} style={{ background:'none', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.45)', fontSize: 11, textDecoration:'underline' }}>
+            Politique de confidentialité
+          </button>
+        </p>
+      </footer>
+    </div>
+  );
+}
+
+// ── Politique de confidentialité ──────────────────────────────────────────
+function PrivacyPage({ onBack }) {
+  const GRAD = 'linear-gradient(160deg, #0f172a 0%, #1e3a8a 60%, #0ea5e9 100%)';
+  const section = (title, content) => (
+    <div style={{ marginBottom: 24 }}>
+      <h3 style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', marginBottom: 8 }}>{title}</h3>
+      <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.7 }}>{content}</div>
+    </div>
+  );
+  return (
+    <div style={{ minHeight: '100vh', background: GRAD, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '2rem 1rem' }}>
+      <div style={{ width: '100%', maxWidth: 680 }}>
+        <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.7)', fontSize: 13, marginBottom: 16, padding: 0 }}>
+          ← Retour
+        </button>
+        <div style={{ background: 'white', borderRadius: 18, padding: '2rem 2.5rem', boxShadow: '0 8px 32px rgba(15,23,42,0.3)' }}>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: '#0f172a', marginBottom: 4 }}>Politique de confidentialité</h1>
+          <p style={{ fontSize: 12, color: '#94a3b8', marginBottom: 28 }}>Dernière mise à jour : {new Date().toLocaleDateString('fr-FR')}</p>
+
+          {section('1. Responsable du traitement',
+            <p>Leavup est édité et hébergé en France. Le responsable du traitement est l'administrateur de chaque organisation utilisant la plateforme Leavup.</p>
+          )}
+          {section('2. Données collectées',
+            <ul style={{ paddingLeft: 20 }}>
+              <li>Données d'identification : prénom, nom, identifiant de connexion</li>
+              <li>Coordonnées : adresse email, numéro de téléphone, adresse postale</li>
+              <li>Données professionnelles : date d'entrée, contrat, soldes de congés</li>
+              <li>Données de connexion : identifiant, mot de passe haché (bcrypt)</li>
+            </ul>
+          )}
+          {section('3. Finalités du traitement',
+            <ul style={{ paddingLeft: 20 }}>
+              <li>Gestion des demandes d'absence et de congés</li>
+              <li>Communication par email (notifications de congés)</li>
+              <li>Administration des comptes utilisateurs</li>
+            </ul>
+          )}
+          {section('4. Base légale',
+            <p>Le traitement est fondé sur l'exécution d'un contrat (gestion des absences en entreprise) et, pour la collecte initiale, sur le consentement de l'utilisateur (art. 6(1)(b) et 6(1)(a) du RGPD).</p>
+          )}
+          {section('5. Sécurité des données',
+            <p>Toutes les données personnelles sont chiffrées en base de données. Les mots de passe sont hachés (bcrypt). L'infrastructure est hébergée en France.</p>
+          )}
+          {section('6. Durée de conservation',
+            <p>Les données sont conservées pendant toute la durée de l'abonnement actif, puis supprimées dans un délai de 30 jours après la résiliation du compte.</p>
+          )}
+          {section('7. Vos droits',
+            <>
+              <p style={{ marginBottom: 8 }}>Conformément au RGPD, vous disposez des droits suivants :</p>
+              <ul style={{ paddingLeft: 20 }}>
+                <li><strong>Droit d'accès</strong> : exporter vos données personnelles depuis votre espace</li>
+                <li><strong>Droit de rectification</strong> : modifier vos informations via votre profil</li>
+                <li><strong>Droit à l'effacement</strong> : demander la suppression de votre compte à votre administrateur</li>
+                <li><strong>Droit à la portabilité</strong> : télécharger vos données au format JSON</li>
+              </ul>
+              <p style={{ marginTop: 8 }}>Pour exercer ces droits, contactez votre administrateur ou écrivez à l'éditeur de la plateforme.</p>
+            </>
+          )}
+          {section('8. Transferts de données',
+            <p>Les données ne sont pas transférées en dehors de l'Union européenne.</p>
+          )}
+          {section('9. Contact',
+            <p>Pour toute question relative à vos données personnelles, contactez l'administrateur de votre organisation ou l'éditeur de Leavup.</p>
+          )}
+
+          <button onClick={onBack} style={{
+            marginTop: 8, background: '#0f172a', border: 'none', color: 'white',
+            borderRadius: 10, padding: '11px 24px', fontSize: 14, cursor: 'pointer', fontWeight: 700,
+          }}>← Retour</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Inscription (auto-souscription plan gratuit) ──────────────────────────
+function RegisterScreen({ onBack, onPrivacy }) {
+  const [form, setForm] = useState({ orgName:'', firstname:'', lastname:'', email:'', password:'', passwordConfirm:'', consent: false });
+  const [err, setErr]       = useState('');
+  const [success, setSuccess] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const goCredentials = async (e) => {
+  const f = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  const submit = async (e) => {
     e.preventDefault();
-    if (!orgSlug.trim()) return setErr('Veuillez saisir le code de votre entreprise');
-    setStep('creds');
-    setErr('');
+    if (!form.orgName || !form.firstname || !form.lastname || !form.email || !form.password)
+      return setErr('Tous les champs sont obligatoires');
+    if (form.password !== form.passwordConfirm)
+      return setErr('Les mots de passe ne correspondent pas');
+    if (form.password.length < 8)
+      return setErr('Mot de passe trop court (8 caractères minimum)');
+    if (!form.consent)
+      return setErr('Vous devez accepter la politique de confidentialité');
+    setLoading(true); setErr('');
+    try {
+      const data = await api('POST', '/register', {
+        orgName: form.orgName, adminFirstname: form.firstname,
+        adminLastname: form.lastname, adminEmail: form.email, adminPassword: form.password,
+      });
+      setSuccess(data);
+    } catch (ex) { setErr(ex.message); }
+    setLoading(false);
   };
+
+  const GRAD = 'linear-gradient(160deg, #0f172a 0%, #1e3a8a 60%, #0ea5e9 100%)';
+
+  if (success) return (
+    <div style={{ minHeight:'100vh', background: GRAD, display:'flex', alignItems:'center', justifyContent:'center', padding:'1rem' }}>
+      <div style={{ background:'white', borderRadius:18, padding:'2rem', maxWidth:400, width:'100%', textAlign:'center' }}>
+        <div style={{ fontSize:48, marginBottom:12 }}>🎉</div>
+        <h2 style={{ fontSize:20, fontWeight:800, color:'#0f172a', marginBottom:8 }}>Compte créé !</h2>
+        <p style={{ fontSize:13, color:'#64748b', marginBottom:20, lineHeight:1.6 }}>
+          Votre espace <strong>{success.slug}</strong> est prêt.<br/>
+          Votre identifiant de connexion : <code style={{ background:'#f1f5f9', padding:'2px 8px', borderRadius:6, fontWeight:700, fontSize:14 }}>{success.identifier}</code>
+        </p>
+        {success.identifier && (
+          <p style={{ fontSize:12, color:'#94a3b8', marginBottom:20 }}>
+            Conservez cet identifiant. Un email de bienvenue vous a été envoyé si le SMTP est configuré.
+          </p>
+        )}
+        <button onClick={onBack} style={{
+          width:'100%', background:'#0f172a', border:'none', color:'white',
+          borderRadius:10, padding:'12px', fontSize:14, cursor:'pointer', fontWeight:700,
+        }}>Se connecter maintenant →</button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ minHeight:'100vh', background: GRAD, display:'flex', alignItems:'center', justifyContent:'center', padding:'1rem' }}>
+      <div style={{ width:'100%', maxWidth:420 }}>
+        <div style={{ textAlign:'center', marginBottom:'1.5rem' }}>
+          <h1 style={{ fontSize:28, fontWeight:800, color:'white', letterSpacing:'-0.04em' }}>
+            Leav<span style={{ color:'#38bdf8' }}>up</span>
+          </h1>
+          <p style={{ fontSize:13, color:'rgba(255,255,255,0.65)', marginTop:6 }}>
+            Créez votre espace gratuitement — 1 admin + 9 employés inclus
+          </p>
+        </div>
+        <div style={{ background:'rgba(255,255,255,0.97)', borderRadius:18, padding:'1.75rem', boxShadow:'0 8px 32px rgba(15,23,42,0.3)' }}>
+          <form onSubmit={submit}>
+            <Field label="Nom de votre entreprise *">
+              <input value={form.orgName} onChange={e=>f('orgName',e.target.value)} style={{width:'100%'}} placeholder="Mon Entreprise SAS" autoFocus />
+            </Field>
+            <div style={{ display:'flex', gap:10 }}>
+              <div style={{ flex:1 }}><Field label="Prénom *"><input value={form.firstname} onChange={e=>f('firstname',e.target.value)} style={{width:'100%'}} /></Field></div>
+              <div style={{ flex:1 }}><Field label="Nom *"><input value={form.lastname} onChange={e=>f('lastname',e.target.value)} style={{width:'100%'}} /></Field></div>
+            </div>
+            <Field label="Email professionnel *">
+              <input type="email" value={form.email} onChange={e=>f('email',e.target.value)} style={{width:'100%'}} placeholder="vous@entreprise.com" />
+            </Field>
+            <PasswordConfirmFields
+              value={form.password}          onChange={v=>f('password',v)}
+              confirm={form.passwordConfirm} onConfirmChange={v=>f('passwordConfirm',v)}
+            />
+            <label style={{ display:'flex', alignItems:'flex-start', gap: 8, marginBottom: 14, fontSize: 12, color: '#475569', cursor:'pointer' }}>
+              <input type="checkbox" checked={form.consent} onChange={e => f('consent', e.target.checked)}
+                style={{ marginTop: 2, flexShrink: 0 }} />
+              <span>
+                J'ai lu et j'accepte la{' '}
+                <button type="button" onClick={onPrivacy} style={{ background:'none', border:'none', cursor:'pointer', color: C.blue, fontSize: 12, fontWeight: 600, padding: 0 }}>
+                  politique de confidentialité
+                </button>
+              </span>
+            </label>
+            {err && <Alert type="error">{err}</Alert>}
+            <Btn full disabled={loading}>{loading ? 'Création…' : 'Créer mon espace gratuit'}</Btn>
+          </form>
+          <p style={{ textAlign:'center', fontSize:12, color:'#94a3b8', marginTop:16 }}>
+            Déjà un compte ?{' '}
+            <button onClick={onBack} style={{ background:'none', border:'none', cursor:'pointer', color:C.blue, fontSize:12, fontWeight:600 }}>Se connecter</button>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Écran de connexion ──────────────────────────────────────────────────────
+function LoginScreen({ onLogin, onBack, onRegister }) {
+  const subdomainSlug = detectSubdomain();
+  const [id, setId]       = useState('');
+  const [pwd, setPwd]     = useState('');
+  const [err, setErr]     = useState('');
+  const [loading, setLoading] = useState(false);
+  const [isSuper, setIsSuper] = useState(false);
 
   const doLogin = async (e) => {
     e.preventDefault();
     setErr(''); setLoading(true);
     try {
       const data = await api('POST', '/auth/login', {
-        orgSlug: step === 'super' ? undefined : orgSlug.trim(),
+        ...(subdomainSlug && !isSuper ? { orgSlug: subdomainSlug } : {}),
         identifier: id.trim(),
         password: pwd,
       });
       onLogin(data);
-    } catch (ex) {
-      setErr(ex.message);
-    } finally {
-      setLoading(false);
-    }
+    } catch (ex) { setErr(ex.message); }
+    setLoading(false);
   };
 
+  const GRAD = 'linear-gradient(160deg, #0f172a 0%, #1e3a8a 60%, #0ea5e9 100%)';
   return (
-    <div style={{
-      minHeight: '100vh', display: 'flex', alignItems: 'center',
-      justifyContent: 'center', padding: '1rem',
-      background: 'linear-gradient(160deg, #0f172a 0%, #1e3a8a 50%, #0ea5e9 100%)',
-    }}>
-      <div style={{ width: '100%', maxWidth: 380 }}>
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <div style={{
-            width: 60, height: 60, borderRadius: 18,
-            background: 'rgba(255,255,255,0.12)',
-            border: '1px solid rgba(255,255,255,0.2)',
-            backdropFilter: 'blur(8px)',
-            margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="white">
-              <path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/>
-            </svg>
-          </div>
-          <h1 style={{ fontSize: 30, fontWeight: 800, color: 'white', letterSpacing: '-0.04em' }}>
-            Leav<span style={{ color: '#38bdf8' }}>up</span>
+    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', padding:'1rem', background: GRAD }}>
+      <div style={{ width:'100%', maxWidth:380 }}>
+        <div style={{ textAlign:'center', marginBottom:'2rem' }}>
+          <h1 style={{ fontSize:30, fontWeight:800, color:'white', letterSpacing:'-0.04em' }}>
+            Leav<span style={{ color:'#38bdf8' }}>up</span>
           </h1>
-          {subdomainSlug ? (
-            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 4 }}>
-              {orgSlug}<span style={{ color: 'rgba(255,255,255,0.4)' }}>.leavup.com</span>
-            </p>
-          ) : (
-            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', marginTop: 6 }}>
-              Gestion des absences pour votre entreprise
-            </p>
-          )}
-        </div>
-
-        <div style={{
-          background: 'rgba(255,255,255,0.95)',
-          borderRadius: 18, padding: '1.5rem',
-          boxShadow: '0 8px 32px rgba(15,23,42,0.3)',
-          border: '1px solid rgba(255,255,255,0.3)',
-          backdropFilter: 'blur(16px)',
-        }}>
-          {step === 'org' && (
-            <form onSubmit={goCredentials}>
-              <Field label="Code de votre entreprise">
-                <input
-                  value={orgSlug}
-                  onChange={e => { setOrgSlug(e.target.value); setErr(''); }}
-                  placeholder="mon-entreprise"
-                  style={{ width: '100%' }}
-                  autoFocus
-                />
-              </Field>
-              {err && <Alert type="error">{err}</Alert>}
-              <Btn full>Continuer →</Btn>
-            </form>
-          )}
-
-          {(step === 'creds' || step === 'super') && (
-            <form onSubmit={doLogin}>
-              {step === 'creds' && (
-                <div style={{
-                  background: C.blueLight, borderRadius: 8, padding: '8px 12px',
-                  fontSize: 12, color: C.blueDark, marginBottom: 14,
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                }}>
-                  <span>🏢 <strong>{orgSlug}</strong>.leavup.com</span>
-                  {/* Permettre de changer d'org seulement si on n'est pas sur un sous-domaine */}
-                  {!subdomainSlug && (
-                    <button type="button" onClick={() => { setStep('org'); setErr(''); }}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: C.blue }}>
-                      Changer
-                    </button>
-                  )}
-                </div>
-              )}
-              {step === 'super' && (
-                <Alert type="info">Connexion Super Admin — leavup.com</Alert>
-              )}
-              <Field label={step === 'super' ? 'Identifiant' : 'Identifiant ou email'}>
-                <input
-                  value={id}
-                  onChange={e => { setId(e.target.value); setErr(''); }}
-                  placeholder={step === 'super' ? 'superadmin' : 'TOJD-2J7M ou prenom@email.fr'}
-                  style={{ width: '100%' }}
-                  autoCapitalize="off"
-                  autoFocus
-                />
-              </Field>
-              <Field label="Mot de passe">
-                <input
-                  type="password" value={pwd}
-                  onChange={e => { setPwd(e.target.value); setErr(''); }}
-                  placeholder="••••••••"
-                  style={{ width: '100%' }}
-                />
-              </Field>
-              {err && <Alert type="error">{err}</Alert>}
-              <Btn full disabled={loading}>
-                {loading ? 'Connexion…' : 'Se connecter'}
-              </Btn>
-            </form>
-          )}
-        </div>
-
-        {step !== 'super' && (
-          <p style={{ textAlign: 'center', marginTop: 16 }}>
-            <button onClick={() => { setStep('super'); setErr(''); setId(''); setPwd(''); }}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: C.textMuted }}>
-              Accès administrateur plateforme
-            </button>
+          <p style={{ fontSize:13, color:'rgba(255,255,255,0.65)', marginTop:6 }}>
+            {subdomainSlug ? `${subdomainSlug}.leavup.com` : 'Gestion des absences pour votre entreprise'}
           </p>
-        )}
+        </div>
+
+        <div data-nosnippet style={{ background:'rgba(255,255,255,0.97)', borderRadius:18, padding:'1.5rem', boxShadow:'0 8px 32px rgba(15,23,42,0.3)' }}>
+          <form onSubmit={doLogin}>
+            {isSuper && <Alert type="info">Connexion Super Admin — leavup.com</Alert>}
+            <Field label={isSuper ? 'Identifiant' : 'Identifiant ou email'}>
+              <input value={id} onChange={e=>{setId(e.target.value);setErr('');}}
+                placeholder={isSuper ? 'superadmin' : 'TOJD-2J7M ou prenom@email.fr'}
+                style={{width:'100%'}} autoCapitalize="off" autoFocus />
+            </Field>
+            <Field label="Mot de passe">
+              <input type="password" value={pwd} onChange={e=>{setPwd(e.target.value);setErr('');}}
+                placeholder="••••••••" style={{width:'100%'}} />
+            </Field>
+            {err && <Alert type="error">{err}</Alert>}
+            <Btn full disabled={loading}>{loading ? 'Connexion…' : 'Se connecter'}</Btn>
+          </form>
+        </div>
+
+        <div style={{ textAlign:'center', marginTop:14, display:'flex', flexDirection:'column', gap:8 }}>
+          {!isSuper && onRegister && (
+            <p style={{ fontSize:13, color:'rgba(255,255,255,0.75)' }}>
+              Pas encore de compte ?{' '}
+              <button onClick={onRegister} style={{ background:'none', border:'none', cursor:'pointer', color:'#38bdf8', fontSize:13, fontWeight:700 }}>
+                Essai gratuit →
+              </button>
+            </p>
+          )}
+          {onBack && (
+            <button onClick={onBack} style={{ background:'none', border:'none', cursor:'pointer', fontSize:12, color:'rgba(255,255,255,0.5)' }}>
+              ← Retour à l'accueil
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -495,7 +950,7 @@ function Layout({ user, org, onLogout, tabs, activeTab, onTab, pendingCount, ful
             fontFamily: 'inherit', transition: 'color 0.15s',
           }}>
             {t}
-            {pendingCount > 0 && i === 2 && user.role === 'admin' && (
+            {pendingCount > 0 && t === 'Demandes' && (
               <span style={{
                 marginLeft: 6, background: C.red, color: 'white',
                 borderRadius: 20, fontSize: 10, padding: '2px 7px', fontWeight: 700,
@@ -949,12 +1404,13 @@ function SmtpConfig({ token }) {
 }
 
 // ── VUE ADMIN ──────────────────────────────────────────────────────────────
-function AdminView({ session, onLogout, onLogoChange }) {
+function AdminView({ session, onLogout, onLogoChange, onPlanChange }) {
   const { token, org } = session;
   const [tab, setTab]               = useState(0);
   const [users, setUsers]           = useState([]);
   const [leaves, setLeaves]         = useState([]);
   const [contracts, setContracts]   = useState([]);
+  const [teams, setTeams]           = useState([]);
   const [settings, setSettings]     = useState({ alertThreshold: org.alertThreshold });
   const [loading, setLoading]       = useState(true);
   const [highlightLeave, setHighlightLeave] = useState(null);
@@ -962,13 +1418,14 @@ function AdminView({ session, onLogout, onLogoChange }) {
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const [u, l, s, c] = await Promise.all([
+      const [u, l, s, c, t] = await Promise.all([
         api('GET', '/users',     null, token),
         api('GET', '/leaves',    null, token),
         api('GET', '/settings',  null, token),
         api('GET', '/contracts', null, token),
+        api('GET', '/teams',     null, token),
       ]);
-      setUsers(u); setLeaves(l); setSettings(s); setContracts(c);
+      setUsers(u); setLeaves(l); setSettings(s); setContracts(c); setTeams(t);
     } catch (e) { console.error(e); }
     if (!silent) setLoading(false);
   }, [token]);
@@ -980,20 +1437,21 @@ function AdminView({ session, onLogout, onLogoChange }) {
   }, [load]);
 
   const pendingCount = leaves.filter(l => l.status === 'pending').length;
-  const TABS = ['Tableau de bord', 'Salariés', 'Demandes', 'Contrats', 'Planning', 'Paramètres'];
+  const TABS = ['Tableau de bord', 'Salariés', 'Équipes', 'Demandes', 'Contrats', 'Planning', 'Paramètres'];
 
   return (
     <Layout user={session.user} org={org} onLogout={onLogout}
       tabs={TABS} activeTab={tab} onTab={setTab} pendingCount={pendingCount}
-      fullWidth={tab === 4}>
+      fullWidth={tab === 5}>
       {loading ? <Spinner /> : (
         <>
-          {tab === 0 && <AdminDash users={users} leaves={leaves} settings={settings} />}
-          {tab === 1 && <AdminUsers users={users} contracts={contracts} leaves={leaves} token={token} org={org} onRefresh={load} />}
-          {tab === 2 && <AdminLeaves users={users} leaves={leaves} settings={settings} token={token} onRefresh={load} highlightLeave={highlightLeave} onHighlightDone={() => setHighlightLeave(null)} />}
-          {tab === 3 && <AdminContracts contracts={contracts} token={token} onRefresh={load} />}
-          {tab === 4 && <AdminPlanning users={users} leaves={leaves} onPendingClick={id => { setHighlightLeave(id); setTab(2); }} />}
-          {tab === 5 && <AdminSettings settings={settings} token={token} org={org} onSaved={(s) => setSettings(s)} onLogoChange={onLogoChange} />}
+          {tab === 0 && <AdminDash users={users} leaves={leaves} settings={settings} teams={teams} />}
+          {tab === 1 && <AdminUsers users={users} contracts={contracts} leaves={leaves} teams={teams} token={token} org={org} onRefresh={load} />}
+          {tab === 2 && <AdminTeams teams={teams} users={users} token={token} onRefresh={load} />}
+          {tab === 3 && <AdminLeaves users={users} leaves={leaves} settings={settings} token={token} onRefresh={load} highlightLeave={highlightLeave} onHighlightDone={() => setHighlightLeave(null)} />}
+          {tab === 4 && <AdminContracts contracts={contracts} token={token} onRefresh={load} />}
+          {tab === 5 && <AdminPlanning users={users} leaves={leaves} onPendingClick={id => { setHighlightLeave(id); setTab(3); }} />}
+          {tab === 6 && <AdminSettings settings={settings} token={token} org={org} onSaved={(s) => setSettings(s)} onLogoChange={onLogoChange} onPlanChange={onPlanChange} />}
         </>
       )}
     </Layout>
@@ -1097,7 +1555,7 @@ function genIdentifier(orgSlug, firstname, lastname) {
   return `${prefix}-${rand}`;
 }
 
-function AdminUsers({ users, contracts, leaves, token, org, onRefresh }) {
+function AdminUsers({ users, contracts, leaves, teams, token, org, onRefresh }) {
   const [modal, setModal]     = useState(null);
   const [target, setTarget]   = useState(null);
   const emptyForm = {
@@ -1105,6 +1563,7 @@ function AdminUsers({ users, contracts, leaves, token, org, onRefresh }) {
     phone:'', email:'',
     addressStreet:'', addressCity:'', addressZip:'', addressCountry:'France',
     entryDate:'', contractId:'', cpBalance:'0', rttBalance:'0', autoAccumulate:true,
+    teamId:'',
   };
   const [form, setForm]       = useState(emptyForm);
   const [formErr, setFormErr] = useState('');
@@ -1141,6 +1600,7 @@ function AdminUsers({ users, contracts, leaves, token, org, onRefresh }) {
       cpBalance:      u.cp_balance ?? 0,
       rttBalance:     u.rtt_balance ?? 0,
       autoAccumulate: u.auto_accumulate ?? true,
+      teamId:         u.team_id || '',
     });
     setTarget(u); setFormErr('');
     setModal('form');
@@ -1168,6 +1628,7 @@ function AdminUsers({ users, contracts, leaves, token, org, onRefresh }) {
       cpBalance:      parseFloat(form.cpBalance) || 0,
       rttBalance:     parseFloat(form.rttBalance) || 0,
       autoAccumulate: form.autoAccumulate,
+      teamId:         form.teamId || null,
       ...(form.password ? { password: form.password } : {}),
     };
     try {
@@ -1317,6 +1778,16 @@ function AdminUsers({ users, contracts, leaves, token, org, onRefresh }) {
               ))}
             </select>
           </Field>
+          <Field label="Équipe">
+            <select value={form.teamId}
+              onChange={e => setForm(f=>({...f, teamId: e.target.value}))}
+              style={{ width:'100%' }}>
+              <option value="">— Aucune équipe —</option>
+              {teams.map(t => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+          </Field>
           <div style={{
             background: C.blueLight, borderRadius: 8, padding: '8px 12px',
             fontSize: 12, color: C.blueDark, marginBottom: 14,
@@ -1350,7 +1821,8 @@ function AdminUsers({ users, contracts, leaves, token, org, onRefresh }) {
         </Modal>
       )}
 
-      <div style={{ display:'flex', justifyContent:'flex-end', marginBottom: 12 }}>
+      <div style={{ display:'flex', justifyContent:'flex-end', gap: 8, marginBottom: 12 }}>
+        <CsvDownloadBtn url="/api/users/export" filename="salaries.csv" token={token} label="Exporter CSV" />
         <Btn onClick={openCreate}>+ Nouveau salarié</Btn>
       </div>
 
@@ -1376,8 +1848,8 @@ function AdminUsers({ users, contracts, leaves, token, org, onRefresh }) {
                     }}>admin</span>
                   )}
                 </div>
-                {(u.contract_name || u.entry_date) && (
-                  <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2, display:'flex', alignItems:'center', gap: 6 }}>
+                {(u.contract_name || u.entry_date || u.team_name) && (
+                  <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2, display:'flex', alignItems:'center', gap: 6, flexWrap:'wrap' }}>
                     {u.contract_name && (
                       <>
                         <span style={{
@@ -1388,6 +1860,12 @@ function AdminUsers({ users, contracts, leaves, token, org, onRefresh }) {
                       </>
                     )}
                     {u.entry_date && <span>· entré le {fmt(u.entry_date)}</span>}
+                    {u.team_name && (
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 20,
+                        background: '#ede9fe', color: '#7c3aed',
+                      }}>⬡ {u.team_name}</span>
+                    )}
                   </div>
                 )}
                 {u.role !== 'admin' && (
@@ -1422,10 +1900,129 @@ function AdminUsers({ users, contracts, leaves, token, org, onRefresh }) {
   );
 }
 
+function AdminTeams({ teams, users, token, onRefresh }) {
+  const [modal, setModal] = useState(null);
+  const [target, setTarget] = useState(null);
+  const emptyForm = { name: '', leaderId: '' };
+  const [form, setForm] = useState(emptyForm);
+  const [formErr, setFormErr] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const employees = users.filter(u => u.role !== 'admin');
+
+  const openCreate = () => { setForm(emptyForm); setTarget(null); setFormErr(''); setModal('form'); };
+  const openEdit = (t) => { setForm({ name: t.name, leaderId: t.leader_id || '' }); setTarget(t); setFormErr(''); setModal('form'); };
+
+  const save = async () => {
+    if (!form.name.trim()) return setFormErr('Le nom de l\'équipe est obligatoire');
+    setSaving(true); setFormErr('');
+    try {
+      if (target) {
+        await api('PUT', `/teams/${target.id}`, { name: form.name, leaderId: form.leaderId || null }, token);
+      } else {
+        await api('POST', '/teams', { name: form.name, leaderId: form.leaderId || null }, token);
+      }
+      setModal(null); onRefresh();
+    } catch (e) { setFormErr(e.message); }
+    setSaving(false);
+  };
+
+  const del = async (t) => {
+    if (!confirm(`Supprimer l'équipe "${t.name}" ? Les membres seront détachés.`)) return;
+    try { await api('DELETE', `/teams/${t.id}`, null, token); onRefresh(); }
+    catch (e) { alert(e.message); }
+  };
+
+  const leaderName = (t) => {
+    if (!t.leader_id) return null;
+    const fn = t.leader_firstname || '';
+    const ln = t.leader_lastname  || '';
+    return (fn || ln) ? `${fn} ${ln}`.trim() : t.leader_name;
+  };
+
+  return (
+    <>
+      {modal === 'form' && (
+        <Modal title={target ? `Modifier — ${target.name}` : 'Nouvelle équipe'} onClose={() => setModal(null)}>
+          <Field label="Nom de l'équipe *">
+            <input value={form.name} onChange={e => setForm(f=>({...f, name: e.target.value}))}
+              style={{ width:'100%' }} placeholder="ex: Développement, Commercial…" />
+          </Field>
+          <Field label="Chef d'équipe">
+            <select value={form.leaderId} onChange={e => setForm(f=>({...f, leaderId: e.target.value}))}
+              style={{ width:'100%' }}>
+              <option value="">— Aucun —</option>
+              {employees.map(u => (
+                <option key={u.id} value={u.id}>
+                  {u.firstname || u.lastname ? `${u.firstname||''} ${u.lastname||''}`.trim() : u.name}
+                  {' '}({u.identifier})
+                </option>
+              ))}
+            </select>
+          </Field>
+          {formErr && <Alert type="error">{formErr}</Alert>}
+          <div style={{ display:'flex', gap: 8 }}>
+            <Btn onClick={save} disabled={saving} full>{target ? 'Enregistrer' : 'Créer'}</Btn>
+            <Btn variant="ghost" onClick={() => setModal(null)} full>Annuler</Btn>
+          </div>
+        </Modal>
+      )}
+
+      <div style={{ display:'flex', justifyContent:'flex-end', marginBottom: 12 }}>
+        <Btn onClick={openCreate}>+ Nouvelle équipe</Btn>
+      </div>
+
+      {teams.length === 0 ? (
+        <div style={{ ...CARD, textAlign:'center', color: C.textHint, fontSize: 13, padding:'2rem' }}>
+          Aucune équipe. Créez votre première équipe pour déléguer la gestion des congés.
+        </div>
+      ) : teams.map(t => {
+        const leader = leaderName(t);
+        const members = users.filter(u => u.team_id === t.id);
+        return (
+          <div key={t.id} style={{ ...CARD, marginBottom: 10 }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 15, fontWeight: 700 }}>⬡ {t.name}</div>
+                <div style={{ fontSize: 12, color: C.textMuted, marginTop: 3, display:'flex', gap: 12, flexWrap:'wrap' }}>
+                  <span>{t.member_count} membre{t.member_count !== 1 ? 's' : ''}</span>
+                  {leader && (
+                    <span>Chef : <strong style={{ color: C.text }}>{leader}</strong></span>
+                  )}
+                  {!leader && (
+                    <span style={{ color: C.amber }}>Aucun chef d'équipe désigné</span>
+                  )}
+                </div>
+                {members.length > 0 && (
+                  <div style={{ marginTop: 8, display:'flex', gap: 6, flexWrap:'wrap' }}>
+                    {members.map(m => (
+                      <span key={m.id} style={{
+                        fontSize: 11, padding:'2px 8px', borderRadius: 20,
+                        background: '#ede9fe', color: '#7c3aed', fontWeight: 500,
+                      }}>
+                        {m.firstname || m.lastname ? `${m.firstname||''} ${m.lastname||''}`.trim() : m.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div style={{ display:'flex', gap: 6, flexShrink: 0, marginLeft: 8 }}>
+                <Btn small variant="ghost" onClick={() => openEdit(t)}>Modifier</Btn>
+                <Btn small variant="danger" onClick={() => del(t)}>×</Btn>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
 function AdminLeaves({ users, leaves, settings, token, onRefresh, highlightLeave, onHighlightDone }) {
   const [rejectModal, setRejectModal] = useState(null);
   const [reason, setReason]           = useState('');
   const [saving, setSaving]           = useState(false);
+  const [exportYear, setExportYear]   = useState(String(new Date().getFullYear()));
   const highlightRef = useRef(null);
 
   useEffect(() => {
@@ -1491,6 +2088,25 @@ function AdminLeaves({ users, leaves, settings, token, onRefresh, highlightLeave
           </div>
         </Modal>
       )}
+
+      <div style={{ display:'flex', justifyContent:'flex-end', alignItems:'center', gap: 8, marginBottom: 16 }}>
+        <select
+          value={exportYear}
+          onChange={e => setExportYear(e.target.value)}
+          style={{ padding:'6px 8px', borderRadius: 6, border:`1px solid ${C.border}`, fontSize: 12, color: C.text, background: C.bg }}
+        >
+          {Array.from({ length: 5 }, (_, i) => String(new Date().getFullYear() - i)).map(y => (
+            <option key={y} value={y}>{y}</option>
+          ))}
+          <option value="">Toutes années</option>
+        </select>
+        <CsvDownloadBtn
+          url={`/api/leaves/export${exportYear ? `?year=${exportYear}` : ''}`}
+          filename={exportYear ? `conges-${exportYear}.csv` : 'conges.csv'}
+          token={token}
+          label="Exporter CSV"
+        />
+      </div>
 
       <div style={{ marginBottom: 20 }}>
         <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, marginBottom: 10 }}>
@@ -1889,7 +2505,165 @@ function AdminPlanning({ users, leaves, onPendingClick }) {
   );
 }
 
-function AdminSettings({ settings, token, org, onSaved, onLogoChange }) {
+// ── Plans disponibles ───────────────────────────────────────────────────────
+const PLANS_DEF = [
+  { id: 'free',       label: 'Starter',    price: 0,    maxUsers: 10,     desc: "jusqu'à 10 salariés" },
+  { id: 'team',       label: 'Teams',      price: 39,   maxUsers: 30,     desc: "jusqu'à 30 salariés", badge: 'Populaire' },
+  { id: 'enterprise', label: 'Enterprise', price: null, maxUsers: 999999, desc: '30+ salariés' },
+];
+
+function PlanSection({ currentPlan, userCount, token, onChange }) {
+  const [confirmPlan,    setConfirmPlan]    = useState(null);
+  const [contactSubject, setContactSubject] = useState(null);
+  const [saving, setSaving]                = useState(false);
+  const [err, setErr]                      = useState('');
+
+  const current = PLANS_DEF.find(p => p.id === (currentPlan || 'free')) || PLANS_DEF[0];
+  const pct = current.maxUsers === 999999 ? 0
+    : Math.min(100, Math.round((userCount / current.maxUsers) * 100));
+  const usageTense = pct >= 100 ? C.red : pct >= 80 ? C.amber : C.blue;
+
+  const select = (plan) => {
+    if (plan.id === (currentPlan || 'free')) return;
+    if (plan.price !== 0) {
+      setContactSubject(`Leavup ${plan.label} — demande de renseignements`);
+      return;
+    }
+    setErr(''); setConfirmPlan(plan);
+  };
+
+  const confirm = async () => {
+    setSaving(true); setErr('');
+    try {
+      const res = await api('PUT', '/settings/plan', { plan: confirmPlan.id }, token);
+      onChange(res.plan);
+      setConfirmPlan(null);
+    } catch (e) { setErr(e.message); }
+    setSaving(false);
+  };
+
+  return (
+    <>
+      {/* Statut plan actuel */}
+      <div style={{ background: C.bgSecond, borderRadius: 12, padding: '14px 16px', marginBottom: 14 }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: 10 }}>
+          <div style={{ display:'flex', alignItems:'center', gap: 8 }}>
+            <span style={{ fontSize: 13, fontWeight: 600 }}>Plan actuel</span>
+            <span style={{
+              background: currentPlan === 'free' ? C.bgCard : C.blueLight,
+              color:      currentPlan === 'free' ? C.textMuted : C.blueDark,
+              border:     `1px solid ${currentPlan === 'free' ? C.border : C.blue}`,
+              borderRadius: 20, padding: '2px 11px', fontSize: 12, fontWeight: 700,
+            }}>{current.label}</span>
+          </div>
+          <span style={{ fontSize: 12, color: C.textMuted, fontWeight: 500 }}>
+            {userCount} / {current.maxUsers === 999999 ? '∞' : current.maxUsers} salariés
+          </span>
+        </div>
+        {current.maxUsers !== 999999 && (
+          <>
+            <div style={{ height: 6, borderRadius: 4, background: C.border, overflow:'hidden' }}>
+              <div style={{
+                height:'100%', borderRadius: 4, background: usageTense,
+                width: `${pct}%`, transition: 'width 0.4s ease',
+              }} />
+            </div>
+            {pct >= 80 && (
+              <div style={{ fontSize: 11, color: usageTense, marginTop: 5, fontWeight: 500 }}>
+                {pct >= 100
+                  ? '⛔ Limite atteinte — impossible d\'ajouter des salariés.'
+                  : '⚠ Vous approchez la limite de votre plan.'}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Grille des plans */}
+      <div style={{ display:'flex', gap: 8, flexWrap:'wrap', marginBottom: 4 }}>
+        {PLANS_DEF.map(p => {
+          const isActive      = p.id === (currentPlan || 'free');
+          const cantDowngrade = p.maxUsers < userCount;
+          return (
+            <button key={p.id} onClick={() => select(p)}
+              disabled={isActive || cantDowngrade}
+              title={cantDowngrade
+                ? `Impossible : vous avez ${userCount} salariés (limite ${p.maxUsers})`
+                : isActive ? 'Plan actuel' : `Passer au plan ${p.label}`}
+              style={{
+                flex: '1 1 90px', padding: '12px 10px', borderRadius: 12, textAlign:'left',
+                border:      `${isActive ? 2 : 1.5}px solid ${isActive ? C.blue : C.border}`,
+                background:  isActive ? C.blueLight : cantDowngrade ? C.bgSecond : 'white',
+                cursor:      isActive || cantDowngrade ? 'default' : 'pointer',
+                opacity:     cantDowngrade ? 0.45 : 1,
+                transition:  'border-color 0.15s, box-shadow 0.15s',
+              }}
+              onMouseEnter={e => { if (!isActive && !cantDowngrade) e.currentTarget.style.boxShadow = `0 0 0 3px rgba(14,165,233,0.12)`; }}
+              onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; }}
+            >
+              {p.badge && (
+                <div style={{
+                  fontSize: 9, fontWeight: 700, color: C.blue,
+                  background: C.blueLight, borderRadius: 6, padding: '1px 6px',
+                  display:'inline-block', marginBottom: 4, letterSpacing: '.03em',
+                }}>{p.badge}</div>
+              )}
+              <div style={{ fontSize: 10, fontWeight: 700, textTransform:'uppercase',
+                letterSpacing:'.05em', marginBottom: 4,
+                color: isActive ? C.blue : C.textMuted,
+              }}>
+                {p.label}{isActive ? ' ✓' : ''}
+              </div>
+              <div style={{ fontSize: 17, fontWeight: 800, lineHeight: 1, marginBottom: 2,
+                color: isActive ? C.blueDark : C.text,
+              }}>
+                {p.price === null ? 'Devis' : p.price === 0 ? 'Gratuit' : `${p.price} €`}
+              </div>
+              {p.price !== null && p.price > 0 && (
+                <div style={{ fontSize: 10, color: C.textHint, marginBottom: 4 }}>/mois HT</div>
+              )}
+              <div style={{ fontSize: 11, color: isActive ? C.blue : C.textMuted }}>{p.desc}</div>
+            </button>
+          );
+        })}
+      </div>
+      <div style={{ fontSize: 11, color: C.textHint, marginBottom: 16 }}>
+        Pour passer à un plan payant, contactez-nous à{' '}
+        <a href="mailto:contact@leavup.com" style={{ color: C.blue }}>contact@leavup.com</a>.
+      </div>
+
+      {/* Modal confirmation */}
+      {confirmPlan && (
+        <Modal title={`Passer au plan ${confirmPlan.label}`}
+          onClose={() => { setConfirmPlan(null); setErr(''); }}>
+          <p style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.6, marginBottom: 16 }}>
+            {confirmPlan.price > 0 ? (
+              <>Vous allez passer au plan <strong>{confirmPlan.label}</strong> —{' '}
+              <strong>{confirmPlan.price} €/mois HT</strong> pour jusqu'à{' '}
+              <strong>{confirmPlan.maxUsers} salariés</strong>.<br />
+              La modification est immédiate et la facturation sera ajustée à votre prochain cycle.</>
+            ) : (
+              <>Vous allez repasser au plan <strong>Starter</strong> (gratuit, 10 salariés maximum).<br />
+              Assurez-vous d'avoir 10 salariés ou moins avant de confirmer.</>
+            )}
+          </p>
+          {err && <Alert type="error">{err}</Alert>}
+          <div style={{ display:'flex', gap: 8 }}>
+            <Btn full onClick={confirm} disabled={saving}>
+              {saving ? 'Mise à jour…' : `Confirmer — ${confirmPlan.label}`}
+            </Btn>
+            <Btn variant="ghost" full onClick={() => { setConfirmPlan(null); setErr(''); }}>
+              Annuler
+            </Btn>
+          </div>
+        </Modal>
+      )}
+      {contactSubject && <ContactModal subject={contactSubject} onClose={() => setContactSubject(null)} />}
+    </>
+  );
+}
+
+function AdminSettings({ settings, token, org, onSaved, onLogoChange, onPlanChange }) {
   const [threshold,            setThreshold]            = useState(settings.alertThreshold);
   const [allowUnpaid,          setAllowUnpaid]          = useState(!!settings.allowUnpaidLeave);
   const [allowWhenExhausted,   setAllowWhenExhausted]   = useState(!!settings.allowUnpaidWhenExhausted);
@@ -1897,6 +2671,8 @@ function AdminSettings({ settings, token, org, onSaved, onLogoChange }) {
   const [notifyOnApprove,      setNotifyOnApprove]      = useState(settings.notifyOnApprove ?? true);
   const [notifyOnReject,       setNotifyOnReject]       = useState(settings.notifyOnReject  ?? true);
   const [notifyAdminNew,       setNotifyAdminNew]       = useState(settings.notifyAdminNew  ?? true);
+  const [leavePeriod,          setLeavePeriod]          = useState(settings.leavePeriod    || 'civil');
+  const [leaveGrantMode,       setLeaveGrantMode]       = useState(settings.leaveGrantMode || 'progressive');
   const [saved, setSaved]     = useState(false);
   const [saving, setSaving]   = useState(false);
   const [logoSaving, setLogoSaving] = useState(false);
@@ -1947,6 +2723,8 @@ function AdminSettings({ settings, token, org, onSaved, onLogoChange }) {
         notifyOnApprove,
         notifyOnReject,
         notifyAdminNew,
+        leavePeriod,
+        leaveGrantMode,
       }, token);
       onSaved(data);
       setSaved(true);
@@ -2062,6 +2840,20 @@ function AdminSettings({ settings, token, org, onSaved, onLogoChange }) {
         setNotifyAdminNew
       )}
 
+      {/* Plan & Abonnement */}
+      <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, margin: '16px 0 10px', textTransform:'uppercase', letterSpacing:'.05em' }}>
+        Plan &amp; Abonnement
+      </div>
+      <PlanSection
+        currentPlan={settings.plan}
+        userCount={settings.userCount || 0}
+        token={token}
+        onChange={(plan) => {
+          onSaved({ ...settings, plan });
+          if (onPlanChange) onPlanChange(plan);
+        }}
+      />
+
       {/* Congés sans solde */}
       <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, margin: '16px 0 8px', textTransform:'uppercase', letterSpacing:'.05em' }}>
         Congés sans solde
@@ -2079,20 +2871,167 @@ function AdminSettings({ settings, token, org, onSaved, onLogoChange }) {
         setAllowWhenExhausted
       )}
 
+      {/* Période de référence des congés */}
+      <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, margin: '16px 0 8px', textTransform:'uppercase', letterSpacing:'.05em' }}>
+        Période de référence des congés
+      </div>
+      <div style={{ background: C.bgSecond, borderRadius: 10, padding: '14px', marginBottom: 12 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Année de référence</div>
+        <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 12 }}>
+          Définit le début et la fin de la période sur laquelle les congés sont comptabilisés.
+        </div>
+        {[
+          { id: 'civil',     label: 'Année civile',         desc: '1er janvier → 31 décembre' },
+          { id: 'reference', label: 'Année de référence CP', desc: '1er juin → 31 mai (période légale française)' },
+        ].map(opt => (
+          <label key={opt.id} onClick={() => { setLeavePeriod(opt.id); setSaved(false); }} style={{
+            display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer',
+            marginBottom: 8, padding: '10px 12px', borderRadius: 8,
+            border: `1.5px solid ${leavePeriod === opt.id ? C.blue : C.border}`,
+            background: leavePeriod === opt.id ? C.blueLight : 'white',
+          }}>
+            <div style={{
+              width: 16, height: 16, borderRadius: '50%', flexShrink: 0, marginTop: 1,
+              border: `2px solid ${leavePeriod === opt.id ? C.blue : C.border}`,
+              background: leavePeriod === opt.id ? C.blue : 'white',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              {leavePeriod === opt.id && <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'white' }} />}
+            </div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: leavePeriod === opt.id ? C.blueDark : C.text }}>{opt.label}</div>
+              <div style={{ fontSize: 12, color: C.textMuted }}>{opt.desc}</div>
+            </div>
+          </label>
+        ))}
+      </div>
+
+      <div style={{ background: C.bgSecond, borderRadius: 10, padding: '14px', marginBottom: 12 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Attribution des jours de congés</div>
+        <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 12 }}>
+          Définit comment les jours sont crédités sur le compte du salarié.
+        </div>
+        {[
+          { id: 'progressive', label: 'Acquisition progressive', desc: 'Les jours s\'accumulent mois par mois (~2,08 j/mois pour 25 j/an).' },
+          { id: 'advance',     label: 'Attribution par anticipation', desc: 'Tous les jours de la période sont crédités dès le premier jour.' },
+        ].map(opt => (
+          <label key={opt.id} onClick={() => { setLeaveGrantMode(opt.id); setSaved(false); }} style={{
+            display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer',
+            marginBottom: 8, padding: '10px 12px', borderRadius: 8,
+            border: `1.5px solid ${leaveGrantMode === opt.id ? C.blue : C.border}`,
+            background: leaveGrantMode === opt.id ? C.blueLight : 'white',
+          }}>
+            <div style={{
+              width: 16, height: 16, borderRadius: '50%', flexShrink: 0, marginTop: 1,
+              border: `2px solid ${leaveGrantMode === opt.id ? C.blue : C.border}`,
+              background: leaveGrantMode === opt.id ? C.blue : 'white',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              {leaveGrantMode === opt.id && <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'white' }} />}
+            </div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: leaveGrantMode === opt.id ? C.blueDark : C.text }}>{opt.label}</div>
+              <div style={{ fontSize: 12, color: C.textMuted }}>{opt.desc}</div>
+            </div>
+          </label>
+        ))}
+      </div>
+
       <div style={{ display:'flex', alignItems:'center', gap: 12, marginTop: 4 }}>
         <Btn onClick={save} disabled={saving}>Enregistrer</Btn>
         {saved && <span style={{ fontSize: 13, color: C.green, fontWeight: 500 }}>✓ Enregistré</span>}
       </div>
+
+      {/* RGPD */}
+      <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, margin: '24px 0 8px', textTransform:'uppercase', letterSpacing:'.05em' }}>
+        RGPD &amp; données personnelles
+      </div>
+      <RgpdAdminSection token={token} />
     </div>
+  );
+}
+
+function RgpdAdminSection({ token }) {
+  const [delModal, setDelModal]   = useState(false);
+  const [delPwd,   setDelPwd]     = useState('');
+  const [delErr,   setDelErr]     = useState('');
+  const [deleting, setDeleting]   = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const res = await fetch('/api/admin/export', { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error('Erreur export');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'export-organisation-leavup.json'; a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) { alert(e.message); }
+    setExporting(false);
+  };
+
+  const handleDelete = async () => {
+    setDelErr('');
+    if (!delPwd) return setDelErr('Mot de passe requis');
+    setDeleting(true);
+    try {
+      await api('DELETE', '/admin/account', { password: delPwd }, token);
+      // Suppression réussie — vider la session et recharger
+      clearSession();
+      window.location.reload();
+    } catch (e) { setDelErr(e.message); }
+    setDeleting(false);
+  };
+
+  return (
+    <>
+      <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: 14, marginBottom: 12 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Exporter toutes les données</div>
+        <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 10 }}>
+          Télécharge un fichier JSON contenant toutes les données de votre organisation (salariés, demandes, paramètres).
+        </div>
+        <Btn onClick={handleExport} disabled={exporting}>{exporting ? 'Export…' : 'Télécharger l\'export'}</Btn>
+      </div>
+
+      <div style={{ background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: 10, padding: 14 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4, color: C.red }}>Supprimer le compte organisation</div>
+        <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 10 }}>
+          Supprime définitivement l'organisation et toutes ses données (salariés, demandes). Cette action est irréversible.
+        </div>
+        <Btn variant="danger" onClick={() => { setDelModal(true); setDelPwd(''); setDelErr(''); }}>Supprimer le compte</Btn>
+      </div>
+
+      {delModal && (
+        <Modal title="Confirmer la suppression" onClose={() => setDelModal(false)}>
+          <p style={{ fontSize: 13, color: C.textMuted, marginBottom: 16 }}>
+            Cette action supprimera définitivement votre organisation et toutes ses données. Entrez votre mot de passe pour confirmer.
+          </p>
+          <Field label="Mot de passe administrateur">
+            <input type="password" value={delPwd} onChange={e => setDelPwd(e.target.value)}
+              style={{ width: '100%' }} autoFocus />
+          </Field>
+          {delErr && <Alert type="error">{delErr}</Alert>}
+          <div style={{ display:'flex', gap: 8 }}>
+            <Btn variant="danger" onClick={handleDelete} disabled={deleting} full>
+              {deleting ? 'Suppression…' : 'Confirmer la suppression'}
+            </Btn>
+            <Btn variant="ghost" onClick={() => setDelModal(false)} full>Annuler</Btn>
+          </div>
+        </Modal>
+      )}
+    </>
   );
 }
 
 // ── VUE EMPLOYÉ ────────────────────────────────────────────────────────────
 function EmployeeView({ session, onLogout }) {
   const { token, user, org } = session;
-  const [tab, setTab]       = useState(0);
-  const [me, setMe]         = useState(null);
-  const [leaves, setLeaves] = useState([]);
+  const [tab, setTab]         = useState(0);
+  const [me, setMe]           = useState(null);
+  const [leaves, setLeaves]   = useState([]);
+  const [teamData, setTeamData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async (silent = false) => {
@@ -2103,6 +3042,13 @@ function EmployeeView({ session, onLogout }) {
         api('GET', '/leaves', null, token),
       ]);
       setMe(myData); setLeaves(lvs);
+      // Charger les données d'équipe si chef d'équipe
+      if (myData?.led_team_id) {
+        try {
+          const td = await api('GET', '/teams/my/leaves', null, token);
+          setTeamData(td);
+        } catch { setTeamData(null); }
+      }
     } catch (e) { console.error(e); }
     if (!silent) setLoading(false);
   }, [token]);
@@ -2113,23 +3059,142 @@ function EmployeeView({ session, onLogout }) {
     return () => clearInterval(id);
   }, [load]);
 
-  const TABS = ["Mon espace", "Nouvelle demande d'absence", 'Historique'];
+  const isLeader = !!me?.led_team_id;
+  const TABS = isLeader
+    ? ["Mon espace", "Nouvelle demande d'absence", 'Historique', `Mon équipe${teamData ? ` (${teamData.leaves.filter(l=>l.status==='pending').length})` : ''}`]
+    : ["Mon espace", "Nouvelle demande d'absence", 'Historique'];
 
   return (
     <Layout user={user} org={org} onLogout={onLogout}
       tabs={TABS} activeTab={tab} onTab={setTab} pendingCount={0}>
       {loading ? <Spinner /> : (
         <>
-          {tab === 0 && <EmpHome me={me} leaves={leaves} />}
+          {tab === 0 && <EmpHome me={me} leaves={leaves} token={token} />}
           {tab === 1 && <EmpRequest me={me} org={org} token={token} onDone={load} />}
-          {tab === 2 && <EmpHistory leaves={leaves} />}
+          {tab === 2 && <EmpHistory leaves={leaves} token={token} />}
+          {tab === 3 && isLeader && <TeamLeaderView teamData={teamData} token={token} onRefresh={load} />}
         </>
       )}
     </Layout>
   );
 }
 
-function EmpHome({ me, leaves }) {
+function TeamLeaderView({ teamData, token, onRefresh }) {
+  const [rejectModal, setRejectModal] = useState(null);
+  const [reason, setReason]           = useState('');
+  const [saving, setSaving]           = useState(false);
+
+  if (!teamData) return <div style={{ ...CARD, textAlign:'center', color: C.textHint, fontSize: 13 }}>Chargement…</div>;
+
+  const { team, members, leaves } = teamData;
+  const pending = leaves.filter(l => l.status === 'pending').sort((a,b) => new Date(a.created_at)-new Date(b.created_at));
+  const done    = leaves.filter(l => l.status !== 'pending').sort((a,b) => new Date(b.created_at)-new Date(a.created_at));
+
+  const approve = async (id) => {
+    setSaving(true);
+    try { await api('PUT', `/leaves/${id}/approve`, {}, token); onRefresh(); }
+    catch (e) { alert(e.message); }
+    setSaving(false);
+  };
+
+  const doReject = async () => {
+    setSaving(true);
+    try {
+      await api('PUT', `/leaves/${rejectModal}/reject`, { rejectReason: reason }, token);
+      setRejectModal(null); setReason(''); onRefresh();
+    } catch (e) { alert(e.message); }
+    setSaving(false);
+  };
+
+  const empName = (l) => {
+    const fn = l.employee_firstname || '';
+    const ln = l.employee_lastname  || '';
+    return (fn || ln) ? `${fn} ${ln}`.trim() : l.employee_name;
+  };
+
+  return (
+    <>
+      {rejectModal && (
+        <Modal title="Motif de refus" onClose={() => { setRejectModal(null); setReason(''); }}>
+          <Field label="Motif (optionnel)">
+            <textarea value={reason} onChange={e => setReason(e.target.value)}
+              rows={3} style={{ width:'100%' }} placeholder="Indisponibilité, chevauchement…" />
+          </Field>
+          <div style={{ display:'flex', gap: 8 }}>
+            <Btn variant="danger" onClick={doReject} disabled={saving} full>Confirmer le refus</Btn>
+            <Btn variant="ghost" onClick={() => { setRejectModal(null); setReason(''); }} full>Annuler</Btn>
+          </div>
+        </Modal>
+      )}
+
+      <div style={{ fontSize: 13, fontWeight: 700, color: C.textMuted, marginBottom: 12 }}>
+        Équipe : <span style={{ color: C.text }}>⬡ {team.name}</span>
+        <span style={{ fontWeight: 400, marginLeft: 8 }}>— {members.length} membre{members.length !== 1 ? 's' : ''}</span>
+      </div>
+
+      {members.length > 0 && (
+        <div style={{ display:'flex', gap: 6, flexWrap:'wrap', marginBottom: 16 }}>
+          {members.map(m => (
+            <span key={m.id} style={{
+              fontSize: 12, padding:'3px 10px', borderRadius: 20,
+              background: '#ede9fe', color: '#7c3aed', fontWeight: 500,
+            }}>
+              {m.firstname || m.lastname ? `${m.firstname||''} ${m.lastname||''}`.trim() : m.name}
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, marginBottom: 10 }}>
+        En attente ({pending.length})
+      </div>
+      {pending.length === 0 ? (
+        <div style={{ ...CARD, fontSize: 13, color: C.textHint, textAlign:'center', padding:'1.5rem', marginBottom: 16 }}>
+          Aucune demande en attente.
+        </div>
+      ) : pending.map(l => (
+        <div key={l.id} style={{ ...CARD, marginBottom: 8, borderLeft: `3px solid ${C.amber}` }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap: 8 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 600, fontSize: 13 }}>{empName(l)}</div>
+              <div style={{ fontSize: 12, color: C.textMuted }}>
+                {fmt(l.start_date)} → {fmt(l.end_date)} · <strong>{l.days}j</strong>
+                {' · '}{{paid:'CP', unpaid:'Sans solde', rtt:'RTT'}[l.leave_type] || l.leave_type}
+              </div>
+              {l.comment && <div style={{ fontSize: 12, color: C.textMuted, marginTop: 3 }}>"{l.comment}"</div>}
+            </div>
+            <div style={{ display:'flex', gap: 6, flexShrink: 0 }}>
+              <Btn small onClick={() => approve(l.id)} disabled={saving}>Approuver</Btn>
+              <Btn small variant="danger" onClick={() => setRejectModal(l.id)} disabled={saving}>Refuser</Btn>
+            </div>
+          </div>
+        </div>
+      ))}
+
+      {done.length > 0 && (
+        <>
+          <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, margin: '16px 0 10px' }}>
+            Historique ({done.length})
+          </div>
+          {done.map(l => (
+            <div key={l.id} style={{ ...CARD, marginBottom: 6,
+              borderLeft: `3px solid ${l.status === 'approved' ? C.green : C.red}`,
+              opacity: 0.85,
+            }}>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>{empName(l)}</div>
+              <div style={{ fontSize: 12, color: C.textMuted }}>
+                {fmt(l.start_date)} → {fmt(l.end_date)} · {l.days}j
+                {' · '}<Badge s={l.status} />
+              </div>
+            </div>
+          ))}
+        </>
+      )}
+    </>
+  );
+}
+
+function EmpHome({ me, leaves, token }) {
   if (!me) return null;
   const todayStr = today();
   const accrued  = parseFloat(me.accrued_cp ?? 0) + parseFloat(me.cp_balance || 0);
@@ -2183,7 +3248,57 @@ function EmpHome({ me, leaves }) {
           ))}
         </div>
       )}
+
+      <EmpExportButton token={token} />
     </>
+  );
+}
+
+function CsvDownloadBtn({ url, filename, token, label = 'Exporter CSV' }) {
+  const [loading, setLoading] = useState(false);
+  const download = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error('Erreur export');
+      const blob = await res.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch (e) { alert(e.message); }
+    setLoading(false);
+  };
+  return (
+    <Btn variant="ghost" onClick={download} disabled={loading}>
+      {loading ? '…' : `↓ ${label}`}
+    </Btn>
+  );
+}
+
+function EmpExportButton({ token }) {
+  const [exporting, setExporting] = useState(false);
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const res = await fetch('/api/me/export', { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error('Erreur export');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'mes-donnees-leavup.json'; a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) { alert(e.message); }
+    setExporting(false);
+  };
+  return (
+    <div style={{ ...CARD, marginTop: 8 }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, marginBottom: 6 }}>Mes données personnelles (RGPD)</div>
+      <div style={{ fontSize: 12, color: C.textHint, marginBottom: 10 }}>
+        Téléchargez l'ensemble de vos données personnelles au format JSON.
+      </div>
+      <Btn onClick={handleExport} disabled={exporting}>{exporting ? 'Export…' : 'Exporter mes données'}</Btn>
+    </div>
   );
 }
 
@@ -2344,7 +3459,7 @@ function EmpRequest({ me, org, token, onDone }) {
   );
 }
 
-function EmpHistory({ leaves }) {
+function EmpHistory({ leaves, token }) {
   if (!leaves.length) return (
     <div style={{ ...CARD, fontSize: 13, color: C.textHint, textAlign:'center', padding:'2rem' }}>
       Aucune demande de congé.
@@ -2352,6 +3467,12 @@ function EmpHistory({ leaves }) {
   );
   return (
     <>
+      <CsvDownloadBtn
+        url="/api/me/leaves/export"
+        filename="mes-conges.csv"
+        token={token}
+        label="Exporter mes congés (CSV)"
+      />
       {[...leaves].sort((a,b) => new Date(b.created_at) - new Date(a.created_at)).map(l => (
         <div key={l.id} style={{ ...CARD, marginBottom: 10 }}>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
@@ -2419,17 +3540,23 @@ function useIdleTimer(onLogout, active) {
 // ── App root ───────────────────────────────────────────────────────────────
 export default function App() {
   const [session, setSession] = useState(() => loadSession());
+  const [screen, setScreen]   = useState('landing'); // 'landing' | 'login' | 'register' | 'privacy'
+  const prevScreenRef = useRef('landing');
   const resetToken = new URLSearchParams(window.location.search).get('token');
 
   const handleLogin = (data) => {
-    const s = { token: data.token, user: data.user, org: data.org || null };
+    // Le token JWT est stocké en cookie HttpOnly par le backend — on ne le conserve pas côté JS
+    const s = { user: data.user, org: data.org || null };
     saveSession(s);
     setSession(s);
+    setScreen('landing');
   };
 
-  const handleLogout = useCallback(() => {
+  const handleLogout = useCallback(async () => {
+    try { await api('POST', '/auth/logout'); } catch { /* best-effort */ }
     clearSession();
     setSession(null);
+    setScreen('landing');
   }, []);
 
   const idleWarning = useIdleTimer(handleLogout, !!session);
@@ -2440,7 +3567,14 @@ export default function App() {
     setSession(null);
   }} />;
 
-  if (!session) return <LoginScreen onLogin={handleLogin} />;
+  const goPrivacy = (from) => { prevScreenRef.current = from; setScreen('privacy'); };
+
+  if (!session) {
+    if (screen === 'privacy')  return <PrivacyPage onBack={() => setScreen(prevScreenRef.current)} />;
+    if (screen === 'login')    return <LoginScreen    onLogin={handleLogin} onBack={() => setScreen('landing')} onRegister={() => setScreen('register')} />;
+    if (screen === 'register') return <RegisterScreen onBack={() => setScreen('login')} onPrivacy={() => goPrivacy('register')} />;
+    return <LandingPage onLogin={() => setScreen('login')} onRegister={() => setScreen('register')} onPrivacy={() => goPrivacy('landing')} />;
+  }
 
   const role = session.user.role;
   const handleLogoChange = (logoData, logoSize) => {
@@ -2449,8 +3583,15 @@ export default function App() {
     setSession(updated);
   };
 
+  const handlePlanChange = (plan) => {
+    const updated = { ...session, org: { ...session.org, plan } };
+    saveSession(updated);
+    setSession(updated);
+  };
+
   return (
     <>
+      <GlobalStyle />
       {idleWarning && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999,
@@ -2466,7 +3607,7 @@ export default function App() {
         </div>
       )}
       {role === 'superadmin' && <SuperAdminView session={session} onLogout={handleLogout} />}
-      {role === 'admin'      && <AdminView      session={session} onLogout={handleLogout} onLogoChange={handleLogoChange} />}
+      {role === 'admin'      && <AdminView      session={session} onLogout={handleLogout} onLogoChange={handleLogoChange} onPlanChange={handlePlanChange} />}
       {role === 'employee'   && <EmployeeView   session={session} onLogout={handleLogout} />}
     </>
   );

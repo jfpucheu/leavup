@@ -1,11 +1,15 @@
 import express        from 'express';
 import cors           from 'cors';
+import cookieParser   from 'cookie-parser';
 import bcrypt         from 'bcryptjs';
 import jwt            from 'jsonwebtoken';
 import pg             from 'pg';
 import dotenv         from 'dotenv';
 import crypto         from 'crypto';
 import nodemailer     from 'nodemailer';
+import rateLimit      from 'express-rate-limit';
+import https          from 'https';
+import fs             from 'fs';
 
 dotenv.config();
 
@@ -13,8 +17,29 @@ const { Pool } = pg;
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 const app = express();
-app.use(cors({ origin: process.env.FRONTEND_URL || '*', credentials: true }));
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true,
+}));
 app.use(express.json());
+app.use(cookieParser());
+
+// ── Rate limiting ───────────────────────────────────────────────────────────
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 15,
+  message: { error: 'Trop de tentatives. Réessayez dans 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true,
+});
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 heure
+  max: 5,
+  message: { error: 'Trop de créations de compte. Réessayez dans 1 heure.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -242,6 +267,20 @@ function emailLeaveRejectedHtml({ firstname, days, startDate, endDate, leaveType
   `);
 }
 
+function emailNewOrgHtml({ orgName, slug, adminFirstname, adminLastname, adminEmail, adminId, createdAt }) {
+  return emailBase(`
+    <h1>Nouvelle entreprise créée</h1>
+    <p>Une nouvelle organisation vient de s'inscrire sur Leavup.</p>
+    <hr>
+    <div class="lbl">Entreprise</div><div class="val">${orgName}</div>
+    <div class="lbl">Slug</div><div class="val val-mono">${slug}</div>
+    <div class="lbl">Administrateur</div><div class="val">${adminFirstname} ${adminLastname}</div>
+    <div class="lbl">Email admin</div><div class="val">${adminEmail}</div>
+    <div class="lbl">Identifiant admin</div><div class="val val-mono">${adminId}</div>
+    <div class="lbl">Date</div><div class="val">${new Date(createdAt).toLocaleString('fr-FR')}</div>
+  `);
+}
+
 async function sendMail(to, subject, html) {
   const transporter = await getTransporter();
   if (!transporter) { console.warn('SMTP non configuré — email non envoyé'); return; }
@@ -295,24 +334,154 @@ async function sendLeaveEmails(type, { leave, employee, adminEmail, appUrl, noti
   } catch (err) { console.error('Erreur email leave:', err); }
 }
 
+// ── Jours fériés légaux français ────────────────────────────────────────────
+
 /**
- * Calcule les CP acquis depuis la date d'entrée.
- * Règle légale : 2,5 j ouvrables par mois travaillé, plafonné à 30j/an.
- * Si pas de date d'entrée → on considère le plafond annuel (30j).
- * @param {string|Date|null} entryDate
+ * Retourne un Set de dates (YYYY-MM-DD) correspondant aux 11 jours fériés
+ * légaux français pour une année donnée.
+ * Inclut les fériés mobiles calculés depuis Pâques (algorithme Butcher/Gregorian).
+ */
+function getFrenchHolidays(year) {
+  // Algorithme de calcul de Pâques (Butcher/Anonymous Gregorian)
+  const a = year % 19, b = Math.floor(year / 100), c = year % 100;
+  const d = Math.floor(b / 4), e = b % 4;
+  const f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4), k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const easterMonth = Math.floor((h + l - 7 * m + 114) / 31);
+  const easterDay   = ((h + l - 7 * m + 114) % 31) + 1;
+  const easter = new Date(Date.UTC(year, easterMonth - 1, easterDay));
+  const add = (base, n) => { const r = new Date(base); r.setUTCDate(r.getUTCDate() + n); return r; };
+  const fmt = d => d.toISOString().slice(0, 10);
+  return new Set([
+    `${year}-01-01`,      // Jour de l'An
+    fmt(add(easter, 1)),  // Lundi de Pâques
+    `${year}-05-01`,      // Fête du Travail
+    `${year}-05-08`,      // Victoire 1945
+    fmt(add(easter, 39)), // Ascension
+    fmt(add(easter, 50)), // Lundi de Pentecôte
+    `${year}-07-14`,      // Fête Nationale
+    `${year}-08-15`,      // Assomption
+    `${year}-11-01`,      // Toussaint
+    `${year}-11-11`,      // Armistice
+    `${year}-12-25`,      // Noël
+  ]);
+}
+
+/**
+ * Compte les jours ouvrés (lundi–vendredi, hors jours fériés) entre deux dates incluses.
+ * @param {string} startStr  YYYY-MM-DD
+ * @param {string} endStr    YYYY-MM-DD
  * @returns {number}
  */
-function computeAccruedCP(entryDate) {
-  if (!entryDate) return 0;
-  const entry = new Date(entryDate);
-  const now   = new Date();
-  if (entry > now) return 0;
+function countOuvres(startStr, endStr) {
+  const d0 = new Date(startStr + 'T00:00:00Z');
+  const d1 = new Date(endStr   + 'T00:00:00Z');
+  if (d0 > d1) return 0;
+  // Collecte les années couvrant la plage pour charger les bons fériés
+  const years = new Set();
+  for (let d = new Date(d0); d <= d1; d.setUTCDate(d.getUTCDate() + 1))
+    years.add(d.getUTCFullYear());
+  const holidays = new Set([...years].flatMap(y => [...getFrenchHolidays(y)]));
+  let count = 0;
+  for (let d = new Date(d0); d <= d1; d.setUTCDate(d.getUTCDate() + 1)) {
+    const dow = d.getUTCDay(); // 0=dim, 6=sam
+    if (dow !== 0 && dow !== 6 && !holidays.has(d.toISOString().slice(0, 10)))
+      count++;
+  }
+  return count;
+}
+
+/**
+ * Retourne les bornes (ISO string) de la période de référence courante.
+ * @param {'civil'|'reference'} leavePeriod
+ * @returns {{ start: string, end: string }}
+ */
+function getPeriodBounds(leavePeriod) {
+  const now = new Date();
+  const y   = now.getFullYear();
+  const m   = now.getMonth(); // 0-indexed
+  if (leavePeriod === 'reference') {
+    // 1er juin → 31 mai
+    if (m >= 5) return { start: `${y}-06-01`,     end: `${y + 1}-05-31` };
+    else        return { start: `${y - 1}-06-01`, end: `${y}-05-31` };
+  }
+  // Année civile : 1er janvier → 31 décembre
+  return { start: `${y}-01-01`, end: `${y}-12-31` };
+}
+
+// ── Calcul des CP acquis ─────────────────────────────────────────────────────
+
+/**
+ * Calcule les CP acquis pour la période en cours, selon les paramètres de l'organisation.
+ *
+ * Règles :
+ *  - autoAccumulate = false  → l'admin gère le solde manuellement, retourne 0
+ *  - leaveGrantMode = 'advance'     → tous les jours crédités au 1er jour de la période
+ *                                     (proratisé si le salarié a rejoint en cours de période)
+ *  - leaveGrantMode = 'progressive' → 2,5j (ou annualDays/12) par mois complet depuis le
+ *                                     début de la période (ou depuis l'entrée si postérieure)
+ *
+ * @param {string|Date|null} entryDate
+ * @param {{ leavePeriod?: string, leaveGrantMode?: string, annualDays?: number, autoAccumulate?: boolean }} orgSettings
+ * @returns {number}
+ */
+function computeAccruedCP(entryDate, orgSettings = {}) {
+  const {
+    leavePeriod    = 'civil',
+    leaveGrantMode = 'progressive',
+    annualDays     = 30,
+    autoAccumulate = true,
+  } = orgSettings;
+
+  // Gestion manuelle : l'admin fixe le solde via cp_balance
+  if (!autoAccumulate) return 0;
+
+  // Sans date d'entrée : impossible de calculer l'acquisition progressive
+  // → en avance : tous les jours crédités (salarié établi) ; progressif : 0 (admin gère via cp_balance)
+  if (!entryDate) return leaveGrantMode === 'advance' ? annualDays : 0;
+
+  const now = new Date();
+  const { start: periodStartStr, end: periodEndStr } = getPeriodBounds(leavePeriod);
+  const periodStart = new Date(periodStartStr + 'T00:00:00Z');
+
+  const entry       = entryDate ? new Date(entryDate) : null;
+  const accrualFrom = (entry && entry > periodStart) ? entry : periodStart;
+  if (accrualFrom > now) return 0;
+
+  if (leaveGrantMode === 'advance') {
+    if (!entry || entry <= periodStart) return annualDays;
+    // Salarié entré en cours de période → prorata jours restants / durée totale
+    const periodEnd  = new Date(periodEndStr + 'T00:00:00Z');
+    const totalMs    = periodEnd - periodStart;
+    const remainMs   = periodEnd - entry;
+    return Math.max(0, Math.round((remainMs / totalMs) * annualDays * 10) / 10);
+  }
+
+  // Mode progressif : annualDays / 12 par mois complet
+  const rate = annualDays / 12;
   const months =
-    (now.getFullYear() - entry.getFullYear()) * 12 +
-    (now.getMonth() - entry.getMonth()) +
-    (now.getDate() >= entry.getDate() ? 0 : -1);
-  // 2.5j × mois complets, plafonné à 30j
-  return Math.min(30, Math.max(0, months) * 2.5);
+    (now.getFullYear() - accrualFrom.getFullYear()) * 12 +
+    (now.getMonth()    - accrualFrom.getMonth()) +
+    (now.getDate() >= accrualFrom.getDate() ? 0 : -1);
+  return Math.min(annualDays, Math.max(0, months) * rate);
+}
+
+/**
+ * Calcule les jours de fractionnement dus (Art. L3141-19 du Code du travail).
+ * Si le salarié prend une partie de son congé principal HORS de la période
+ * principale (1er mai → 31 octobre), il obtient des jours supplémentaires :
+ *   ≥ 6 jours hors période → +2 jours
+ *   3–5 jours hors période → +1 jour
+ * @param {number} daysOutsideMain
+ * @returns {number}
+ */
+function computeFractionnement(daysOutsideMain) {
+  if (daysOutsideMain >= 6) return 2;
+  if (daysOutsideMain >= 3) return 1;
+  return 0;
 }
 
 function sign(payload) {
@@ -327,11 +496,15 @@ function sign(payload) {
  */
 function auth(roles = []) {
   return (req, res, next) => {
-    const header = req.headers.authorization;
-    if (!header?.startsWith('Bearer '))
-      return res.status(401).json({ error: 'Non authentifié' });
+    // Cookie HttpOnly en priorité ; fallback Bearer pour les tests/API clients
+    let token = req.cookies?.session;
+    if (!token) {
+      const header = req.headers.authorization;
+      if (header?.startsWith('Bearer ')) token = header.slice(7);
+    }
+    if (!token) return res.status(401).json({ error: 'Non authentifié' });
     try {
-      const payload = jwt.verify(header.slice(7), JWT_SECRET);
+      const payload = jwt.verify(token, JWT_SECRET);
       req.user = payload;
       if (roles.length && !roles.includes(payload.role))
         return res.status(403).json({ error: 'Accès interdit' });
@@ -342,65 +515,93 @@ function auth(roles = []) {
   };
 }
 
+/** Options cookie — Secure uniquement si HTTPS_COOKIES=true (prod) */
+function cookieOpts() {
+  return {
+    httpOnly: true,
+    secure:   process.env.HTTPS_COOKIES === 'true',
+    sameSite: 'strict',
+    maxAge:   8 * 60 * 60 * 1000, // 8h
+    path:     '/',
+  };
+}
+
 // ── Auth ───────────────────────────────────────────────────────────────────
 
 /**
  * POST /api/auth/login
  * Body: { orgSlug?, identifier, password }
- *   - orgSlug absent → tentative superadmin
- *   - orgSlug présent → utilisateur de l'organisation
+ *   - orgSlug absent + identifier='superadmin' → superadmin
+ *   - orgSlug absent + autre identifier → recherche globale tous orgs
+ *   - orgSlug présent → recherche dans l'organisation (sous-domaine)
  */
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', authLimiter, async (req, res) => {
   const { orgSlug, identifier, password } = req.body;
+  if (!identifier || typeof identifier !== 'string' || identifier.length > 200)
+    return res.status(400).json({ error: 'Identifiant invalide' });
+  if (!password || typeof password !== 'string' || password.length > 200)
+    return res.status(400).json({ error: 'Mot de passe invalide' });
+  const login = (identifier || '').trim();
 
-  // Superadmin (pas d'org)
-  if (!orgSlug) {
-    if (identifier === 'superadmin' && password === SUPER_PW) {
+  // Superadmin
+  if (login === 'superadmin' && !orgSlug) {
+    if (password === SUPER_PW) {
       const token = sign({ id: 'superadmin', role: 'superadmin' });
-      return res.json({
-        token,
-        user: { id: 'superadmin', name: 'Super Admin', role: 'superadmin' },
-      });
+      res.cookie('session', token, cookieOpts());
+      return res.json({ token, user: { id: 'superadmin', name: 'Super Admin', role: 'superadmin' } });
     }
     return res.status(401).json({ error: 'Identifiants invalides' });
   }
 
-  // Trouver l'organisation
-  const { rows: orgs } = await pool.query(
-    'SELECT * FROM organizations WHERE slug = $1', [orgSlug.toLowerCase()]
-  );
-  if (!orgs.length)
-    return res.status(404).json({ error: 'Organisation introuvable' });
-  const org = orgs[0];
+  const hmac = emailHmac(login);
 
-  // Trouver l'utilisateur — par identifiant ou email (via HMAC si chiffrement actif)
-  const login = identifier.trim();
-  const hmac  = emailHmac(login); // null si pas de HMAC_KEY configuré
-  const { rows: users } = await pool.query(
-    `SELECT * FROM users WHERE org_id = $1 AND (
-       identifier = $2
-       OR ($3::text IS NOT NULL AND email_hmac = $3)
-       OR ($3::text IS NULL AND email IS NOT NULL AND lower(email) = $4)
-     )`,
-    [org.id, login.toUpperCase(), hmac, login.toLowerCase()]
-  );
-  if (!users.length)
-    return res.status(401).json({ error: 'Identifiants invalides' });
+  let users;
+  if (orgSlug) {
+    // Recherche dans une org spécifique (sous-domaine)
+    const { rows: [o] } = await pool.query('SELECT id FROM organizations WHERE slug = $1', [orgSlug.toLowerCase()]);
+    if (!o) return res.status(404).json({ error: 'Organisation introuvable' });
+    const result = await pool.query(
+      `SELECT * FROM users WHERE org_id = $1 AND (
+         identifier = $2
+         OR ($3::text IS NOT NULL AND email_hmac = $3)
+         OR ($3::text IS NULL AND email IS NOT NULL AND lower(email) = $4)
+       )`,
+      [o.id, login.toUpperCase(), hmac, login.toLowerCase()]
+    );
+    users = result.rows;
+  } else {
+    // Recherche globale — l'identifiant contient le préfixe org donc les collisions sont rares
+    const result = await pool.query(
+      `SELECT * FROM users WHERE identifier = $1
+         OR ($2::text IS NOT NULL AND email_hmac = $2)
+         OR ($2::text IS NULL AND email IS NOT NULL AND lower(email) = $3)`,
+      [login.toUpperCase(), hmac, login.toLowerCase()]
+    );
+    users = result.rows;
+  }
+
+  if (!users.length) return res.status(401).json({ error: 'Identifiants invalides' });
+  if (users.length > 1) return res.status(409).json({
+    error: 'Plusieurs comptes trouvés avec cet identifiant. Utilisez votre adresse email pour vous connecter.',
+  });
   const user = users[0];
 
   const valid = await bcrypt.compare(password, user.password_hash);
-  if (!valid)
-    return res.status(401).json({ error: 'Identifiants invalides' });
+  if (!valid) return res.status(401).json({ error: 'Identifiants invalides' });
+
+  const { rows: [org] } = await pool.query('SELECT * FROM organizations WHERE id = $1', [user.org_id]);
+  if (!org) return res.status(500).json({ error: 'Organisation introuvable' });
 
   const token = sign({ id: user.id, orgId: org.id, role: user.role });
+  res.cookie('session', token, cookieOpts());
   res.json({
     token,
     user: {
-      id:          user.id,
-      identifier:  user.identifier,
-      name:        user.name,
-      role:        user.role,
-      annualDays:  user.annual_days,
+      id:         user.id,
+      identifier: user.identifier,
+      name:       decrypt(user.name) || user.name,
+      role:       user.role,
+      annualDays: user.annual_days,
     },
     org: {
       id:                      org.id,
@@ -410,13 +611,92 @@ app.post('/api/auth/login', async (req, res) => {
       logoData:                org.logo_data || null,
       logoSize:                org.logo_size || 'M',
       siret:                   org.siret || null,
-      contactFirstname:        org.contact_firstname || null,
-      contactLastname:         org.contact_lastname  || null,
-      contactEmail:            org.contact_email     || null,
+      contactFirstname:        decrypt(org.contact_firstname) || null,
+      contactLastname:         decrypt(org.contact_lastname)  || null,
+      contactEmail:            decrypt(org.contact_email)     || null,
       allowUnpaidLeave:        org.allow_unpaid_leave         || false,
       allowUnpaidWhenExhausted:org.allow_unpaid_when_exhausted|| false,
+      plan:                    org.plan || 'free',
     },
   });
+});
+
+// ── Déconnexion ─────────────────────────────────────────────────────────────
+
+app.post('/api/auth/logout', (req, res) => {
+  res.clearCookie('session', { path: '/' });
+  res.json({ ok: true });
+});
+
+// ── Auto-inscription (plan gratuit) ────────────────────────────────────────
+
+app.post('/api/register', registerLimiter, async (req, res) => {
+  const { orgName, adminFirstname, adminLastname, adminEmail, adminPassword } = req.body;
+  if (!orgName || !adminFirstname || !adminLastname || !adminEmail || !adminPassword)
+    return res.status(400).json({ error: 'Tous les champs sont obligatoires' });
+  if (adminPassword.length < 8)
+    return res.status(400).json({ error: 'Mot de passe trop court (8 caractères minimum)' });
+
+  // Générer un slug depuis le nom de l'entreprise
+  let slug = orgName.trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30) || 'org';
+
+  // Vérifier unicité du slug (ajouter suffixe numérique si nécessaire)
+  const { rows: existing } = await pool.query(
+    "SELECT slug FROM organizations WHERE slug ~ $1", [`^${slug}(-[0-9]+)?$`]
+  );
+  if (existing.length) slug = `${slug}-${existing.length + 1}`;
+
+  // Générer l'identifiant admin
+  const slugPart   = slug.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 2);
+  const initials   = ((adminFirstname[0] || '') + (adminLastname[0] || '')).toUpperCase();
+  const rand4      = crypto.randomBytes(2).toString('hex').toUpperCase().slice(0, 4);
+  const adminId    = `${slugPart}${initials}-${rand4}`;
+  const fullName   = [adminFirstname, adminLastname].filter(Boolean).join(' ').trim();
+  const hash       = await bcrypt.hash(adminPassword, 10);
+
+  const encContact = encryptOrg({ contact_firstname: adminFirstname, contact_lastname: adminLastname, contact_email: adminEmail, contact_phone: null });
+  const encAdmin   = encryptUser({ name: fullName, firstname: adminFirstname.trim(), lastname: adminLastname.trim(), email: adminEmail });
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows: [org] } = await client.query(
+      `INSERT INTO organizations (name, slug, alert_threshold, plan,
+         contact_firstname, contact_lastname, contact_email)
+       VALUES ($1,$2,3,'free',$3,$4,$5) RETURNING *`,
+      [orgName.trim(), slug, encContact.contact_firstname, encContact.contact_lastname, encContact.contact_email]
+    );
+    await client.query(
+      `INSERT INTO users (org_id, identifier, name, firstname, lastname, email, email_hmac, password_hash, role, annual_days)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'admin',30)`,
+      [org.id, adminId, encAdmin.name, encAdmin.firstname, encAdmin.lastname, encAdmin.email, emailHmac(adminEmail), hash]
+    );
+    await client.query('COMMIT');
+    res.status(201).json({ ok: true, slug, identifier: adminId });
+
+    // Email de bienvenue à l'admin de l'org
+    pool.query('SELECT id FROM users WHERE org_id=$1 AND role=$2', [org.id, 'admin'])
+      .then(({ rows: [u] }) => {
+        if (u) sendWelcomeEmail({ user: { id: u.id, firstname: adminFirstname, lastname: adminLastname, email: adminEmail, identifier: adminId }, org, adminName: 'Leavup', plainPassword: adminPassword });
+      }).catch(e => console.error('Welcome email register:', e));
+
+    // Notification superadmin
+    getSmtpConfig().then(cfg => {
+      const to = cfg.from || process.env.SMTP_FROM;
+      if (!to) return;
+      sendMail(to, `Nouvelle entreprise — ${orgName}`, emailNewOrgHtml({
+        orgName, slug, adminFirstname, adminLastname, adminEmail, adminId, createdAt: new Date(),
+      })).catch(e => console.error('Superadmin notify register:', e));
+    }).catch(e => console.error('Superadmin notify config:', e));
+  } catch (e) {
+    await client.query('ROLLBACK');
+    if (e.code === '23505') return res.status(409).json({ error: 'Ce nom d\'entreprise est déjà utilisé' });
+    throw e;
+  } finally {
+    client.release();
+  }
 });
 
 // ── Organisations (superadmin) ─────────────────────────────────────────────
@@ -572,6 +852,20 @@ app.delete('/api/orgs/:id', auth(['superadmin']), async (req, res) => {
 // ── Utilisateurs ───────────────────────────────────────────────────────────
 
 app.get('/api/users', auth(['admin']), async (req, res) => {
+  const { rows: [orgRow] } = await pool.query(
+    'SELECT leave_period, leave_grant_mode FROM organizations WHERE id = $1',
+    [req.user.orgId]
+  );
+  const orgSettings = {
+    leavePeriod:    orgRow?.leave_period    || 'civil',
+    leaveGrantMode: orgRow?.leave_grant_mode || 'progressive',
+  };
+  const { start: periodStart, end: periodEnd } = getPeriodBounds(orgSettings.leavePeriod);
+
+  // Période principale (1er mai – 31 octobre) pour le fractionnement
+  const mainStart = `${new Date(periodStart).getUTCFullYear()}-05-01`;
+  const mainEnd   = `${new Date(periodEnd  ).getUTCFullYear()}-10-31`;
+
   const { rows } = await pool.query(
     `SELECT
        u.id, u.identifier, u.name, u.firstname, u.lastname,
@@ -579,20 +873,40 @@ app.get('/api/users', auth(['admin']), async (req, res) => {
        u.address_street, u.address_city, u.address_zip, u.address_country,
        u.role, u.annual_days,
        u.entry_date, u.contract_id, u.cp_balance, u.rtt_balance, u.auto_accumulate,
-       u.created_at,
+       u.created_at, u.team_id,
+       t.name AS team_name,
        c.name AS contract_name,
-       COALESCE(SUM(lr.days) FILTER (WHERE lr.status IN ('approved','pending') AND lr.leave_type = 'paid'),   0) AS taken_days,
-       COALESCE(SUM(lr.days) FILTER (WHERE lr.status IN ('approved','pending') AND lr.leave_type = 'rtt'),    0) AS taken_rtt_days,
-       COALESCE(SUM(lr.days) FILTER (WHERE lr.status IN ('approved','pending') AND lr.leave_type = 'unpaid'), 0) AS taken_unpaid_days
+       COALESCE(SUM(lr.days) FILTER (
+         WHERE lr.status IN ('approved','pending') AND lr.leave_type = 'paid'
+           AND lr.start_date >= $2 AND lr.start_date <= $3
+       ), 0) AS taken_days,
+       COALESCE(SUM(lr.days) FILTER (
+         WHERE lr.status IN ('approved','pending') AND lr.leave_type = 'rtt'
+           AND lr.start_date >= $2 AND lr.start_date <= $3
+       ), 0) AS taken_rtt_days,
+       COALESCE(SUM(lr.days) FILTER (
+         WHERE lr.status IN ('approved','pending') AND lr.leave_type = 'unpaid'
+           AND lr.start_date >= $2 AND lr.start_date <= $3
+       ), 0) AS taken_unpaid_days,
+       COALESCE(SUM(lr.days) FILTER (
+         WHERE lr.status = 'approved' AND lr.leave_type = 'paid'
+           AND lr.start_date >= $2 AND lr.start_date <= $3
+           AND (lr.start_date < $4 OR lr.start_date > $5)
+       ), 0) AS days_outside_main
      FROM users u
      LEFT JOIN contracts c ON c.id = u.contract_id
+     LEFT JOIN teams t ON t.id = u.team_id
      LEFT JOIN leave_requests lr ON lr.user_id = u.id
      WHERE u.org_id = $1
-     GROUP BY u.id, c.name
+     GROUP BY u.id, c.name, t.name
      ORDER BY u.lastname, u.firstname, u.name`,
-    [req.user.orgId]
+    [req.user.orgId, periodStart, periodEnd, mainStart, mainEnd]
   );
-  res.json(rows.map(u => ({ ...decryptUser(u), accrued_cp: computeAccruedCP(u.entry_date) })));
+  res.json(rows.map(u => ({
+    ...decryptUser(u),
+    accrued_cp: computeAccruedCP(u.entry_date, { ...orgSettings, annualDays: u.annual_days, autoAccumulate: u.auto_accumulate }),
+    fractionnement_bonus: computeFractionnement(parseFloat(u.days_outside_main || 0)),
+  })));
 });
 
 app.post('/api/users', auth(['admin']), async (req, res) => {
@@ -601,9 +915,26 @@ app.post('/api/users', auth(['admin']), async (req, res) => {
     phone = null, email = null,
     addressStreet = null, addressCity = null, addressZip = null, addressCountry = 'France',
     entryDate = null, contractId = null, cpBalance = 0, rttBalance = 0, autoAccumulate = true,
+    teamId = null,
   } = req.body;
   if (!identifier || (!firstname && !lastname) || !password)
     return res.status(400).json({ error: 'identifier, nom/prénom et password sont obligatoires' });
+  if (password.length < 8)
+    return res.status(400).json({ error: 'Mot de passe trop court (8 caractères minimum)' });
+
+  // Vérification limite plan gratuit (5 utilisateurs max)
+  const { rows: [planInfo] } = await pool.query(
+    `SELECT o.plan, COUNT(u.id)::int AS user_count
+     FROM organizations o LEFT JOIN users u ON u.org_id = o.id
+     WHERE o.id = $1 GROUP BY o.plan`, [req.user.orgId]
+  );
+  const planLimit = PLAN_LIMITS[planInfo?.plan] ?? 5;
+  if (planInfo && planInfo.user_count >= planLimit)
+    return res.status(403).json({
+      error: `Limite du plan atteinte (${planLimit} utilisateurs maximum). Passez au plan supérieur dans Paramètres → Plan & Abonnement.`,
+      planLimit: true,
+    });
+
   const fullName = [firstname, lastname].filter(Boolean).join(' ').trim();
   const hash = await bcrypt.hash(password, 10);
   // Chiffrement des champs PII avant insertion
@@ -618,16 +949,17 @@ app.post('/api/users', auth(['admin']), async (req, res) => {
       `INSERT INTO users
          (org_id, identifier, name, firstname, lastname, password_hash, role, annual_days,
           phone, email, email_hmac, address_street, address_city, address_zip, address_country,
-          entry_date, contract_id, cp_balance, rtt_balance, auto_accumulate)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,30, $8,$9,$10,$11,$12,$13,$14, $15,$16,$17,$18,$19)
+          entry_date, contract_id, cp_balance, rtt_balance, auto_accumulate, team_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,30, $8,$9,$10,$11,$12,$13,$14, $15,$16,$17,$18,$19,$20)
        RETURNING id, identifier, name, firstname, lastname, role, annual_days,
                  phone, email, address_street, address_city, address_zip, address_country,
-                 entry_date, contract_id, cp_balance, rtt_balance, auto_accumulate`,
+                 entry_date, contract_id, cp_balance, rtt_balance, auto_accumulate, team_id`,
       [req.user.orgId, identifier.trim().toUpperCase(),
        enc.name, enc.firstname, enc.lastname, hash, role,
        enc.phone, enc.email, emailHmac(email),
        enc.address_street, enc.address_city, enc.address_zip, enc.address_country,
-       entryDate || null, contractId || null, cpBalance, rttBalance, autoAccumulate]
+       entryDate || null, contractId || null, cpBalance, rttBalance, autoAccumulate,
+       teamId || null]
     );
     res.status(201).json({ ...decryptUser(user), taken_days: 0 });
 
@@ -659,6 +991,7 @@ app.put('/api/users/:id', auth(['admin']), async (req, res) => {
     phone, email,
     addressStreet, addressCity, addressZip, addressCountry,
     entryDate, contractId, cpBalance, rttBalance, autoAccumulate,
+    teamId,
   } = req.body;
   const fullName = [firstname, lastname].filter(Boolean).join(' ').trim();
   // Chiffrement des champs PII avant mise à jour
@@ -674,14 +1007,14 @@ app.put('/api/users/:id', auth(['admin']), async (req, res) => {
     'phone=$4', 'email=$5', 'email_hmac=$6',
     'address_street=$7', 'address_city=$8', 'address_zip=$9', 'address_country=$10',
     'entry_date=$11', 'contract_id=$12',
-    'cp_balance=$13', 'rtt_balance=$14', 'auto_accumulate=$15',
+    'cp_balance=$13', 'rtt_balance=$14', 'auto_accumulate=$15', 'team_id=$16',
   ];
   const p = [
     enc.name, enc.firstname, enc.lastname,
     enc.phone, enc.email, emailHmac(email),
     enc.address_street, enc.address_city, enc.address_zip, enc.address_country,
     entryDate || null, contractId || null,
-    cpBalance ?? 0, rttBalance ?? 0, autoAccumulate ?? true,
+    cpBalance ?? 0, rttBalance ?? 0, autoAccumulate ?? true, teamId || null,
   ];
   if (password) {
     const hash = await bcrypt.hash(password, 10);
@@ -693,7 +1026,7 @@ app.put('/api/users/:id', auth(['admin']), async (req, res) => {
              WHERE id=$${p.length - 1} AND org_id=$${p.length}
              RETURNING id, identifier, name, firstname, lastname, role, annual_days,
                        phone, email, address_street, address_city, address_zip, address_country,
-                       entry_date, contract_id, cp_balance, rtt_balance, auto_accumulate`;
+                       entry_date, contract_id, cp_balance, rtt_balance, auto_accumulate, team_id`;
   const { rows: [user] } = await pool.query(q, p);
   if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
   res.json(decryptUser(user));
@@ -706,6 +1039,97 @@ app.delete('/api/users/:id', auth(['admin']), async (req, res) => {
   );
   if (!rowCount) return res.status(404).json({ error: 'Utilisateur introuvable ou suppression admin interdite' });
   res.json({ ok: true });
+});
+
+// ── Équipes ────────────────────────────────────────────────────────────────
+
+app.get('/api/teams', auth(['admin']), async (req, res) => {
+  const { rows } = await pool.query(
+    `SELECT t.id, t.name, t.leader_id, t.created_at,
+            u.firstname AS leader_firstname, u.lastname AS leader_lastname, u.name AS leader_name,
+            COUNT(m.id)::int AS member_count
+     FROM teams t
+     LEFT JOIN users u ON u.id = t.leader_id
+     LEFT JOIN users m ON m.team_id = t.id
+     WHERE t.org_id = $1
+     GROUP BY t.id, u.firstname, u.lastname, u.name
+     ORDER BY t.name`,
+    [req.user.orgId]
+  );
+  res.json(rows.map(r => ({
+    ...r,
+    leader_firstname: decrypt(r.leader_firstname),
+    leader_lastname:  decrypt(r.leader_lastname),
+    leader_name:      decrypt(r.leader_name),
+  })));
+});
+
+app.post('/api/teams', auth(['admin']), async (req, res) => {
+  const { name, leaderId = null } = req.body;
+  if (!name) return res.status(400).json({ error: 'Le nom de l\'équipe est obligatoire' });
+  try {
+    const { rows: [team] } = await pool.query(
+      `INSERT INTO teams (org_id, name, leader_id) VALUES ($1, $2, $3) RETURNING *`,
+      [req.user.orgId, name.trim(), leaderId || null]
+    );
+    res.status(201).json(team);
+  } catch (e) {
+    if (e.code === '23505') return res.status(409).json({ error: 'Une équipe avec ce nom existe déjà' });
+    throw e;
+  }
+});
+
+app.put('/api/teams/:id', auth(['admin']), async (req, res) => {
+  const { name, leaderId } = req.body;
+  const { rows: [team] } = await pool.query(
+    `UPDATE teams SET name=$1, leader_id=$2 WHERE id=$3 AND org_id=$4 RETURNING *`,
+    [name, leaderId || null, req.params.id, req.user.orgId]
+  );
+  if (!team) return res.status(404).json({ error: 'Équipe introuvable' });
+  res.json(team);
+});
+
+app.delete('/api/teams/:id', auth(['admin']), async (req, res) => {
+  // Retirer les membres de l'équipe avant suppression
+  await pool.query('UPDATE users SET team_id = NULL WHERE team_id = $1 AND org_id = $2', [req.params.id, req.user.orgId]);
+  const { rowCount } = await pool.query('DELETE FROM teams WHERE id=$1 AND org_id=$2', [req.params.id, req.user.orgId]);
+  if (!rowCount) return res.status(404).json({ error: 'Équipe introuvable' });
+  res.json({ ok: true });
+});
+
+// Congés de l'équipe que l'utilisateur dirige (pour les chefs d'équipe)
+app.get('/api/teams/my/leaves', auth(['employee']), async (req, res) => {
+  const { rows: [team] } = await pool.query(
+    'SELECT id FROM teams WHERE leader_id = $1 AND org_id = $2',
+    [req.user.id, req.user.orgId]
+  );
+  if (!team) return res.status(403).json({ error: 'Vous n\'êtes pas chef d\'équipe' });
+
+  const { rows: members } = await pool.query(
+    `SELECT u.id, u.identifier, u.name, u.firstname, u.lastname, u.cp_balance, u.rtt_balance,
+            u.entry_date, u.auto_accumulate
+     FROM users u WHERE u.team_id = $1`,
+    [team.id]
+  );
+  const decMembers = members.map(m => decryptUser(m));
+
+  const { rows: leaves } = await pool.query(
+    `SELECT lr.*, u.name AS employee_name, u.identifier AS employee_identifier,
+            u.firstname AS employee_firstname, u.lastname AS employee_lastname
+     FROM leave_requests lr
+     JOIN users u ON u.id = lr.user_id
+     WHERE u.team_id = $1
+     ORDER BY lr.created_at DESC`,
+    [team.id]
+  );
+  const decLeaves = leaves.map(l => ({
+    ...l,
+    employee_name:      decrypt(l.employee_name),
+    employee_firstname: decrypt(l.employee_firstname),
+    employee_lastname:  decrypt(l.employee_lastname),
+  }));
+
+  res.json({ team, members: decMembers, leaves: decLeaves });
 });
 
 // ── Congés ─────────────────────────────────────────────────────────────────
@@ -739,32 +1163,66 @@ app.post('/api/leaves', auth(['employee']), async (req, res) => {
     return res.status(400).json({ error: 'Type de congé invalide' });
   if (!['full', 'am', 'pm'].includes(period))
     return res.status(400).json({ error: 'Période invalide' });
-  // Demi-journée : forcément 1 seul jour, 0.5j décompté
-  const days = (period !== 'full') ? 0.5 : (req.body.days || 0);
 
-  // Soldes courants
+  // ── Calcul des jours (backend est autoritaire) ───────────────────────────
+  // Demi-journée = 0.5j fixe ; pleine journée = comptage ouvrés réel (hors week-end + fériés)
+  const days = (period !== 'full') ? 0.5 : countOuvres(startDate, endDate);
+  if (days <= 0)
+    return res.status(400).json({ error: 'La période sélectionnée ne contient aucun jour ouvré.' });
+
+  // ── Paramètres de l'organisation ────────────────────────────────────────
+  const { rows: [org] } = await pool.query(
+    `SELECT allow_unpaid_leave, allow_unpaid_when_exhausted,
+            leave_period, leave_grant_mode, annual_days
+     FROM organizations WHERE id = $1`,
+    [req.user.orgId]
+  );
+  const orgSettings = {
+    leavePeriod:    org.leave_period     || 'civil',
+    leaveGrantMode: org.leave_grant_mode || 'progressive',
+    annualDays:     org.annual_days      || 30,
+  };
+  const { start: periodStart, end: periodEnd } = getPeriodBounds(orgSettings.leavePeriod);
+
+  // ── Soldes courants (limités à la période de référence) ──────────────────
   const { rows: [bal] } = await pool.query(
     `SELECT
-       u.entry_date, u.cp_balance, u.rtt_balance,
-       COALESCE(SUM(lr.days) FILTER (WHERE lr.status = 'approved' AND lr.leave_type = 'paid'),   0) AS taken_paid,
-       COALESCE(SUM(lr.days) FILTER (WHERE lr.status = 'approved' AND lr.leave_type = 'rtt'),    0) AS taken_rtt
+       u.entry_date, u.annual_days, u.cp_balance, u.rtt_balance, u.auto_accumulate,
+       COALESCE(SUM(lr.days) FILTER (
+         WHERE lr.status = 'approved' AND lr.leave_type = 'paid'
+           AND lr.start_date >= $2 AND lr.start_date <= $3
+       ), 0) AS taken_paid,
+       COALESCE(SUM(lr.days) FILTER (
+         WHERE lr.status = 'approved' AND lr.leave_type = 'rtt'
+           AND lr.start_date >= $2 AND lr.start_date <= $3
+       ), 0) AS taken_rtt,
+       COALESCE(SUM(lr.days) FILTER (
+         WHERE lr.status = 'approved' AND lr.leave_type = 'paid'
+           AND lr.start_date >= $2 AND lr.start_date <= $3
+           AND (lr.start_date < $4 OR lr.start_date > $5)
+       ), 0) AS days_outside_main
      FROM users u
      LEFT JOIN leave_requests lr ON lr.user_id = u.id
      WHERE u.id = $1
-     GROUP BY u.entry_date, u.cp_balance, u.rtt_balance`,
-    [req.user.id]
+     GROUP BY u.entry_date, u.annual_days, u.cp_balance, u.rtt_balance, u.auto_accumulate`,
+    [req.user.id, periodStart, periodEnd,
+     `${new Date(periodStart).getUTCFullYear()}-05-01`,
+     `${new Date(periodEnd).getUTCFullYear()}-10-31`]
   );
-  const availableCP  = computeAccruedCP(bal?.entry_date) + parseFloat(bal?.cp_balance || 0) - parseFloat(bal?.taken_paid || 0);
+
+  const accrued    = computeAccruedCP(bal?.entry_date, { ...orgSettings, annualDays: bal?.annual_days || 30, autoAccumulate: bal?.auto_accumulate ?? true });
+  const availableCP  = accrued + parseFloat(bal?.cp_balance || 0) - parseFloat(bal?.taken_paid || 0);
   const availableRTT = parseFloat(bal?.rtt_balance || 0) - parseFloat(bal?.taken_rtt || 0);
+
+  // ── Contrôle durée congé principal (Art. L3141-17) ──────────────────────
+  const warnings = [];
+  if (leaveType === 'paid' && days > 20)
+    warnings.push('Attention : un congé de plus de 20 jours ouvrés consécutifs est soumis à accord de l\'employeur (Art. L3141-17).');
 
   if (leaveType === 'rtt') {
     if (availableRTT < days)
       return res.status(400).json({ error: `Solde RTT insuffisant (${availableRTT.toFixed(1)}j disponibles)` });
   } else if (leaveType === 'unpaid') {
-    const { rows: [org] } = await pool.query(
-      'SELECT allow_unpaid_leave, allow_unpaid_when_exhausted FROM organizations WHERE id = $1',
-      [req.user.orgId]
-    );
     if (!org.allow_unpaid_leave)
       return res.status(403).json({ error: 'Les congés sans solde ne sont pas autorisés par votre organisation.' });
     if (org.allow_unpaid_when_exhausted && availableCP > 0)
@@ -775,12 +1233,36 @@ app.post('/api/leaves', auth(['employee']), async (req, res) => {
       return res.status(400).json({ error: `Solde CP insuffisant (${availableCP.toFixed(1)}j disponibles)` });
   }
 
+  // ── Fractionnement (Art. L3141-19) ──────────────────────────────────────
+  // Jours de cette demande hors période principale (mai–oct) qui s'ajoutent aux existants
+  const leaveYear = new Date(startDate + 'T00:00:00Z').getUTCFullYear();
+  const mainStart = `${leaveYear}-05-01`, mainEnd = `${leaveYear}-10-31`;
+  let newOutside = 0;
+  if (leaveType === 'paid' && period === 'full') {
+    // Jours de la nouvelle demande qui tombent hors période principale
+    newOutside = countOuvres(startDate, endDate < mainStart ? endDate : mainStart) +
+                 (endDate > mainEnd ? countOuvres(mainEnd < startDate ? startDate : mainEnd, endDate) : 0);
+    // Correction : simple check si la plage entière est hors période
+    const s = new Date(startDate + 'T00:00:00Z'), e = new Date(endDate + 'T00:00:00Z');
+    const ms = new Date(mainStart + 'T00:00:00Z'), me = new Date(mainEnd + 'T00:00:00Z');
+    if (e < ms || s > me) newOutside = days;
+    else if (s >= ms && e <= me) newOutside = 0;
+    else newOutside = days - countOuvres(
+      s < ms ? mainStart : startDate,
+      e > me ? mainEnd   : endDate
+    );
+  }
+  const totalOutside = parseFloat(bal?.days_outside_main || 0) + Math.max(0, newOutside);
+  const fractBonus   = computeFractionnement(totalOutside);
+  if (fractBonus > 0 && leaveType === 'paid')
+    warnings.push(`Fractionnement (Art. L3141-19) : ${fractBonus} jour${fractBonus > 1 ? 's' : ''} supplémentaire${fractBonus > 1 ? 's' : ''} dû${fractBonus > 1 ? 's' : ''} au salarié pour congés hors période principale.`);
+
   const { rows: [leave] } = await pool.query(
     `INSERT INTO leave_requests (org_id, user_id, start_date, end_date, days, comment, leave_type, period)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
     [req.user.orgId, req.user.id, startDate, endDate, days, comment || null, leaveType, period]
   );
-  res.status(201).json(leave);
+  res.status(201).json({ ...leave, warnings: warnings.length ? warnings : undefined });
 
   // Notifications email (asynchrone, n'affecte pas la réponse)
   pool.query(
@@ -802,7 +1284,18 @@ app.post('/api/leaves', auth(['employee']), async (req, res) => {
   }).catch(e => console.error(e));
 });
 
-app.put('/api/leaves/:id/approve', auth(['admin']), async (req, res) => {
+app.put('/api/leaves/:id/approve', auth(['admin', 'employee']), async (req, res) => {
+  // Vérifier si l'employé est chef de l'équipe du demandeur
+  if (req.user.role === 'employee') {
+    const { rows: [chk] } = await pool.query(
+      `SELECT 1 FROM teams t
+       JOIN users u ON u.team_id = t.id
+       JOIN leave_requests lr ON lr.user_id = u.id
+       WHERE t.leader_id = $1 AND t.org_id = $2 AND lr.id = $3`,
+      [req.user.id, req.user.orgId, req.params.id]
+    );
+    if (!chk) return res.status(403).json({ error: 'Accès refusé' });
+  }
   const { rows: [leave] } = await pool.query(
     `UPDATE leave_requests SET status = 'approved'
      WHERE id = $1 AND org_id = $2 AND status = 'pending'
@@ -821,7 +1314,18 @@ app.put('/api/leaves/:id/approve', auth(['admin']), async (req, res) => {
   }).catch(e => console.error(e));
 });
 
-app.put('/api/leaves/:id/reject', auth(['admin']), async (req, res) => {
+app.put('/api/leaves/:id/reject', auth(['admin', 'employee']), async (req, res) => {
+  // Vérifier si l'employé est chef de l'équipe du demandeur
+  if (req.user.role === 'employee') {
+    const { rows: [chk] } = await pool.query(
+      `SELECT 1 FROM teams t
+       JOIN users u ON u.team_id = t.id
+       JOIN leave_requests lr ON lr.user_id = u.id
+       WHERE t.leader_id = $1 AND t.org_id = $2 AND lr.id = $3`,
+      [req.user.id, req.user.orgId, req.params.id]
+    );
+    if (!chk) return res.status(403).json({ error: 'Accès refusé' });
+  }
   const { rejectReason } = req.body;
   const { rows: [leave] } = await pool.query(
     `UPDATE leave_requests SET status = 'rejected', reject_reason = $1
@@ -885,14 +1389,19 @@ app.delete('/api/contracts/:id', auth(['admin']), async (req, res) => {
 
 app.get('/api/settings', auth(['admin']), async (req, res) => {
   const { rows: [org] } = await pool.query(
-    `SELECT name, slug, alert_threshold, allow_unpaid_leave, allow_unpaid_when_exhausted,
-            notify_on_submit, notify_on_approve, notify_on_reject, notify_admin_new
-     FROM organizations WHERE id = $1`,
+    `SELECT o.name, o.slug, o.plan, o.alert_threshold,
+            o.allow_unpaid_leave, o.allow_unpaid_when_exhausted,
+            o.notify_on_submit, o.notify_on_approve, o.notify_on_reject, o.notify_admin_new,
+            o.leave_period, o.leave_grant_mode,
+            (SELECT COUNT(*)::int FROM users u WHERE u.org_id = o.id) AS user_count
+     FROM organizations o WHERE o.id = $1`,
     [req.user.orgId]
   );
   res.json({
     name: org.name,
     slug: org.slug,
+    plan:                     org.plan || 'free',
+    userCount:                org.user_count || 0,
     alertThreshold:           org.alert_threshold,
     allowUnpaidLeave:         org.allow_unpaid_leave,
     allowUnpaidWhenExhausted: org.allow_unpaid_when_exhausted,
@@ -900,26 +1409,55 @@ app.get('/api/settings', auth(['admin']), async (req, res) => {
     notifyOnApprove:          org.notify_on_approve ?? true,
     notifyOnReject:           org.notify_on_reject  ?? true,
     notifyAdminNew:           org.notify_admin_new  ?? true,
+    leavePeriod:              org.leave_period      || 'civil',
+    leaveGrantMode:           org.leave_grant_mode  || 'progressive',
   });
 });
 
 app.put('/api/settings', auth(['admin']), async (req, res) => {
   const { alertThreshold, allowUnpaidLeave, allowUnpaidWhenExhausted,
-          notifyOnSubmit, notifyOnApprove, notifyOnReject, notifyAdminNew } = req.body;
+          notifyOnSubmit, notifyOnApprove, notifyOnReject, notifyAdminNew,
+          leavePeriod, leaveGrantMode } = req.body;
   if (!alertThreshold || alertThreshold < 1)
     return res.status(400).json({ error: 'Seuil invalide' });
+  const period = ['civil', 'reference'].includes(leavePeriod) ? leavePeriod : 'civil';
+  const grant  = ['progressive', 'advance'].includes(leaveGrantMode) ? leaveGrantMode : 'progressive';
   await pool.query(
     `UPDATE organizations
      SET alert_threshold = $1, allow_unpaid_leave = $2, allow_unpaid_when_exhausted = $3,
-         notify_on_submit = $4, notify_on_approve = $5, notify_on_reject = $6, notify_admin_new = $7
-     WHERE id = $8`,
+         notify_on_submit = $4, notify_on_approve = $5, notify_on_reject = $6, notify_admin_new = $7,
+         leave_period = $8, leave_grant_mode = $9
+     WHERE id = $10`,
     [alertThreshold, !!allowUnpaidLeave, !!allowUnpaidWhenExhausted,
      !!notifyOnSubmit, !!notifyOnApprove, !!notifyOnReject, !!notifyAdminNew,
-     req.user.orgId]
+     period, grant, req.user.orgId]
   );
   res.json({ alertThreshold, allowUnpaidLeave: !!allowUnpaidLeave, allowUnpaidWhenExhausted: !!allowUnpaidWhenExhausted,
     notifyOnSubmit: !!notifyOnSubmit, notifyOnApprove: !!notifyOnApprove,
-    notifyOnReject: !!notifyOnReject, notifyAdminNew: !!notifyAdminNew });
+    notifyOnReject: !!notifyOnReject, notifyAdminNew: !!notifyAdminNew,
+    leavePeriod: period, leaveGrantMode: grant });
+});
+
+const PLAN_LIMITS = { free: 10, team: 30, enterprise: 999999 };
+
+app.put('/api/settings/plan', auth(['admin']), async (req, res) => {
+  const { plan } = req.body;
+  if (!PLAN_LIMITS[plan])
+    return res.status(400).json({ error: 'Plan invalide' });
+
+  const { rows: [{ user_count }] } = await pool.query(
+    'SELECT COUNT(*)::int AS user_count FROM users WHERE org_id = $1',
+    [req.user.orgId]
+  );
+  const limit = PLAN_LIMITS[plan];
+  if (user_count > limit)
+    return res.status(409).json({
+      error: `Impossible : votre organisation compte ${user_count} salariés, mais le plan ${plan} est limité à ${limit}.`,
+      tooManyUsers: true,
+    });
+
+  await pool.query('UPDATE organizations SET plan = $1 WHERE id = $2', [plan, req.user.orgId]);
+  res.json({ plan });
 });
 
 app.put('/api/settings/logo', auth(['admin']), async (req, res) => {
@@ -939,22 +1477,46 @@ app.put('/api/settings/logo', auth(['admin']), async (req, res) => {
 // ── Profil courant ─────────────────────────────────────────────────────────
 
 app.get('/api/me', auth(['admin', 'employee']), async (req, res) => {
+  const { rows: [orgRow] } = await pool.query(
+    'SELECT leave_period, leave_grant_mode FROM organizations WHERE id = $1',
+    [req.user.orgId]
+  );
+  const orgSettings = {
+    leavePeriod:    orgRow?.leave_period    || 'civil',
+    leaveGrantMode: orgRow?.leave_grant_mode || 'progressive',
+  };
+  const { start: periodStart, end: periodEnd } = getPeriodBounds(orgSettings.leavePeriod);
+
   const { rows: [user] } = await pool.query(
     `SELECT
        u.id, u.identifier, u.name, u.firstname, u.lastname, u.role, u.annual_days,
        u.phone, u.email, u.address_street, u.address_city, u.address_zip, u.address_country,
-       u.entry_date, u.cp_balance, u.rtt_balance, u.auto_accumulate,
-       COALESCE(SUM(lr.days) FILTER (WHERE lr.status IN ('approved','pending') AND lr.leave_type = 'paid'),   0) AS taken_days,
-       COALESCE(SUM(lr.days) FILTER (WHERE lr.status IN ('approved','pending') AND lr.leave_type = 'rtt'),    0) AS taken_rtt_days,
-       COALESCE(SUM(lr.days) FILTER (WHERE lr.status IN ('approved','pending') AND lr.leave_type = 'unpaid'), 0) AS taken_unpaid_days
+       u.entry_date, u.cp_balance, u.rtt_balance, u.auto_accumulate, u.team_id,
+       mt.name AS team_name,
+       lt.id   AS led_team_id,
+       lt.name AS led_team_name,
+       COALESCE(SUM(lr.days) FILTER (
+         WHERE lr.status IN ('approved','pending') AND lr.leave_type = 'paid'
+           AND lr.start_date >= $2 AND lr.start_date <= $3
+       ), 0) AS taken_days,
+       COALESCE(SUM(lr.days) FILTER (
+         WHERE lr.status IN ('approved','pending') AND lr.leave_type = 'rtt'
+           AND lr.start_date >= $2 AND lr.start_date <= $3
+       ), 0) AS taken_rtt_days,
+       COALESCE(SUM(lr.days) FILTER (
+         WHERE lr.status IN ('approved','pending') AND lr.leave_type = 'unpaid'
+           AND lr.start_date >= $2 AND lr.start_date <= $3
+       ), 0) AS taken_unpaid_days
      FROM users u
+     LEFT JOIN teams mt ON mt.id = u.team_id
+     LEFT JOIN teams lt ON lt.leader_id = u.id AND lt.org_id = u.org_id
      LEFT JOIN leave_requests lr ON lr.user_id = u.id
      WHERE u.id = $1
-     GROUP BY u.id`,
-    [req.user.id]
+     GROUP BY u.id, mt.name, lt.id, lt.name`,
+    [req.user.id, periodStart, periodEnd]
   );
   if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
-  const accrued_cp = computeAccruedCP(user.entry_date);
+  const accrued_cp = computeAccruedCP(user.entry_date, { ...orgSettings, annualDays: user.annual_days, autoAccumulate: user.auto_accumulate });
   res.json({ ...decryptUser(user), taken_days: parseInt(user.taken_days), accrued_cp });
 });
 
@@ -983,7 +1545,7 @@ app.get('/api/auth/check-token', async (req, res) => {
 app.post('/api/auth/reset-password', async (req, res) => {
   const { token, password } = req.body;
   if (!token || !password) return res.status(400).json({ error: 'Token et mot de passe requis' });
-  if (password.length < 6)  return res.status(400).json({ error: 'Mot de passe trop court (6 car. min)' });
+  if (password.length < 8)  return res.status(400).json({ error: 'Mot de passe trop court (8 car. min)' });
   const { rows: [row] } = await pool.query(
     `SELECT * FROM password_reset_tokens WHERE token = $1`, [token]
   );
@@ -1101,6 +1663,292 @@ app.post('/api/superadmin/smtp/test', auth(['superadmin']), async (req, res) => 
   }
 });
 
+// ── RGPD : export données personnelles (employé) ───────────────────────────
+app.get('/api/me/export', auth(['admin', 'employee']), async (req, res) => {
+  const { rows: [user] } = await pool.query(
+    `SELECT u.id, u.identifier, u.role, u.annual_days, u.cp_balance, u.rtt_balance,
+            u.entry_date, u.auto_accumulate, u.created_at,
+            u.name, u.firstname, u.lastname, u.phone, u.email,
+            u.address_street, u.address_city, u.address_zip, u.address_country,
+            o.name AS org_name, o.slug AS org_slug
+     FROM users u JOIN organizations o ON o.id = u.org_id
+     WHERE u.id = $1`, [req.user.id]
+  );
+  if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
+  const dec = decryptUser(user);
+
+  const { rows: leaves } = await pool.query(
+    `SELECT id, start_date, end_date, days, status, leave_type, period, comment, created_at
+     FROM leave_requests WHERE user_id = $1 ORDER BY start_date DESC`, [req.user.id]
+  );
+
+  const exportData = {
+    exported_at: new Date().toISOString(),
+    user: {
+      id: dec.id,
+      identifier: dec.identifier,
+      role: dec.role,
+      firstname: dec.firstname,
+      lastname: dec.lastname,
+      name: dec.name,
+      email: dec.email,
+      phone: dec.phone,
+      address_street: dec.address_street,
+      address_city: dec.address_city,
+      address_zip: dec.address_zip,
+      address_country: dec.address_country,
+      entry_date: dec.entry_date,
+      annual_days: dec.annual_days,
+      cp_balance: dec.cp_balance,
+      rtt_balance: dec.rtt_balance,
+      created_at: dec.created_at,
+      organisation: dec.org_name,
+    },
+    leave_requests: leaves,
+  };
+
+  res.setHeader('Content-Disposition', `attachment; filename="mes-donnees-leavup.json"`);
+  res.setHeader('Content-Type', 'application/json');
+  res.json(exportData);
+});
+
+// ── RGPD : export complet organisation (admin) ─────────────────────────────
+app.get('/api/admin/export', auth(['admin']), async (req, res) => {
+  const { rows: [org] } = await pool.query(
+    `SELECT * FROM organizations WHERE id = $1`, [req.user.orgId]
+  );
+  const decOrg = decryptOrg(org);
+
+  const { rows: users } = await pool.query(
+    `SELECT u.id, u.identifier, u.role, u.annual_days, u.cp_balance, u.rtt_balance,
+            u.entry_date, u.created_at,
+            u.name, u.firstname, u.lastname, u.phone, u.email,
+            u.address_street, u.address_city, u.address_zip, u.address_country
+     FROM users u WHERE u.org_id = $1 ORDER BY u.created_at`, [req.user.orgId]
+  );
+  const decUsers = users.map(decryptUser);
+
+  const { rows: leaves } = await pool.query(
+    `SELECT lr.*, u.identifier AS user_identifier
+     FROM leave_requests lr JOIN users u ON u.id = lr.user_id
+     WHERE lr.org_id = $1 ORDER BY lr.start_date DESC`, [req.user.orgId]
+  );
+
+  const exportData = {
+    exported_at: new Date().toISOString(),
+    organisation: {
+      id: decOrg.id,
+      name: decOrg.name,
+      slug: decOrg.slug,
+      siret: decOrg.siret,
+      address_street: decOrg.address_street,
+      address_city: decOrg.address_city,
+      address_zip: decOrg.address_zip,
+      address_country: decOrg.address_country,
+      contact_firstname: decOrg.contact_firstname,
+      contact_lastname: decOrg.contact_lastname,
+      contact_email: decOrg.contact_email,
+      contact_phone: decOrg.contact_phone,
+      plan: decOrg.plan,
+      created_at: decOrg.created_at,
+    },
+    users: decUsers.map(u => ({
+      id: u.id, identifier: u.identifier, role: u.role,
+      firstname: u.firstname, lastname: u.lastname, name: u.name,
+      email: u.email, phone: u.phone,
+      address_street: u.address_street, address_city: u.address_city,
+      address_zip: u.address_zip, address_country: u.address_country,
+      entry_date: u.entry_date, annual_days: u.annual_days,
+      cp_balance: u.cp_balance, rtt_balance: u.rtt_balance,
+      created_at: u.created_at,
+    })),
+    leave_requests: leaves,
+  };
+
+  res.setHeader('Content-Disposition', `attachment; filename="export-organisation-leavup.json"`);
+  res.setHeader('Content-Type', 'application/json');
+  res.json(exportData);
+});
+
+// ── RGPD : suppression compte organisation (admin) ────────────────────────
+app.delete('/api/admin/account', auth(['admin']), async (req, res) => {
+  const { password } = req.body;
+  if (!password) return res.status(400).json({ error: 'Mot de passe requis' });
+
+  const { rows: [user] } = await pool.query(
+    'SELECT password_hash FROM users WHERE id = $1', [req.user.id]
+  );
+  const ok = await bcrypt.compare(password, user.password_hash);
+  if (!ok) return res.status(403).json({ error: 'Mot de passe incorrect' });
+
+  // La suppression cascade via ON DELETE CASCADE sur org_id
+  await pool.query('DELETE FROM organizations WHERE id = $1', [req.user.orgId]);
+  res.json({ ok: true });
+});
+
+// ── Export CSV ──────────────────────────────────────────────────────────────
+
+function toCSV(rows, columns) {
+  const esc = v => {
+    if (v == null) return '';
+    const s = String(v);
+    return (s.includes(',') || s.includes('"') || s.includes('\n'))
+      ? '"' + s.replace(/"/g, '""') + '"'
+      : s;
+  };
+  const header = columns.map(c => esc(c.label)).join(',');
+  const body   = rows.map(r => columns.map(c => esc(c.value(r))).join(',')).join('\n');
+  return '\uFEFF' + header + '\n' + body; // BOM UTF-8 pour Excel
+}
+
+const LEAVE_TYPE_FR   = { paid: 'Congé payé', rtt: 'RTT', unpaid: 'Sans solde' };
+const LEAVE_STATUS_FR = { pending: 'En attente', approved: 'Approuvé', rejected: 'Refusé' };
+const PERIOD_FR       = { full: 'Journée', am: 'Matin', pm: 'Après-midi' };
+
+const LEAVE_COLS = [
+  { label: 'Identifiant',     value: r => r.user_identifier },
+  { label: 'Nom',             value: r => r.user_lastname   },
+  { label: 'Prénom',          value: r => r.user_firstname  },
+  { label: 'Équipe',          value: r => r.team_name       },
+  { label: 'Type',            value: r => LEAVE_TYPE_FR[r.leave_type]   || r.leave_type },
+  { label: 'Période',         value: r => PERIOD_FR[r.period]           || r.period     },
+  { label: 'Date début',      value: r => r.start_date ? String(r.start_date).slice(0, 10) : '' },
+  { label: 'Date fin',        value: r => r.end_date   ? String(r.end_date).slice(0, 10)   : '' },
+  { label: 'Jours',           value: r => r.days },
+  { label: 'Statut',          value: r => LEAVE_STATUS_FR[r.status] || r.status },
+  { label: 'Motif refus',     value: r => r.reject_reason },
+  { label: 'Commentaire',     value: r => r.comment },
+  { label: 'Date de demande', value: r => r.created_at ? String(r.created_at).slice(0, 10) : '' },
+];
+
+// Admin : export congés CSV (filtre optionnel ?year=XXXX)
+app.get('/api/leaves/export', auth(['admin']), async (req, res) => {
+  const { year } = req.query;
+  const params = [req.user.orgId];
+  let where = 'WHERE lr.org_id = $1';
+  if (year && /^\d{4}$/.test(year)) {
+    where += ` AND EXTRACT(YEAR FROM lr.start_date) = $2`;
+    params.push(parseInt(year, 10));
+  }
+  const { rows } = await pool.query(`
+    SELECT lr.*,
+           u.identifier AS user_identifier,
+           u.firstname  AS user_firstname,
+           u.lastname   AS user_lastname,
+           u.name       AS user_name,
+           t.name       AS team_name
+    FROM leave_requests lr
+    JOIN  users u ON u.id = lr.user_id
+    LEFT JOIN teams t ON t.id = u.team_id
+    ${where}
+    ORDER BY lr.start_date DESC
+  `, params);
+
+  const dec = rows.map(r => ({
+    ...r,
+    user_firstname: decrypt(r.user_firstname),
+    user_lastname:  decrypt(r.user_lastname),
+    user_name:      decrypt(r.user_name),
+  }));
+
+  const fname = year ? `conges-${year}.csv` : 'conges.csv';
+  res.setHeader('Content-Disposition', `attachment; filename="${fname}"`);
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.send(toCSV(dec, LEAVE_COLS));
+});
+
+// Admin : export salariés CSV
+app.get('/api/users/export', auth(['admin']), async (req, res) => {
+  const { rows: [orgRow] } = await pool.query(
+    'SELECT leave_period, leave_grant_mode FROM organizations WHERE id = $1',
+    [req.user.orgId]
+  );
+  const orgSettings = {
+    leavePeriod:    orgRow?.leave_period    || 'civil',
+    leaveGrantMode: orgRow?.leave_grant_mode || 'progressive',
+  };
+  const { start: periodStart, end: periodEnd } = getPeriodBounds(orgSettings.leavePeriod);
+
+  const { rows } = await pool.query(`
+    SELECT u.identifier, u.name, u.firstname, u.lastname, u.role,
+           u.cp_balance, u.rtt_balance, u.entry_date, u.annual_days, u.auto_accumulate,
+           t.name AS team_name, c.name AS contract_name,
+           COALESCE(SUM(lr.days) FILTER (
+             WHERE lr.status IN ('approved','pending') AND lr.leave_type = 'paid'
+               AND lr.start_date >= $2 AND lr.start_date <= $3
+           ), 0) AS taken_days,
+           COALESCE(SUM(lr.days) FILTER (
+             WHERE lr.status IN ('approved','pending') AND lr.leave_type = 'rtt'
+               AND lr.start_date >= $2 AND lr.start_date <= $3
+           ), 0) AS taken_rtt_days,
+           COALESCE(SUM(lr.days) FILTER (
+             WHERE lr.status IN ('approved','pending') AND lr.leave_type = 'unpaid'
+               AND lr.start_date >= $2 AND lr.start_date <= $3
+           ), 0) AS taken_unpaid_days
+    FROM users u
+    LEFT JOIN teams t     ON t.id = u.team_id
+    LEFT JOIN contracts c ON c.id = u.contract_id
+    LEFT JOIN leave_requests lr ON lr.user_id = u.id
+    WHERE u.org_id = $1
+    GROUP BY u.id, t.name, c.name
+    ORDER BY u.lastname, u.firstname, u.name
+  `, [req.user.orgId, periodStart, periodEnd]);
+
+  const dec = rows.map(u => ({
+    ...decryptUser(u),
+    accrued_cp: computeAccruedCP(u.entry_date, { ...orgSettings, annualDays: u.annual_days, autoAccumulate: u.auto_accumulate }),
+  }));
+
+  const USER_COLS = [
+    { label: 'Identifiant',     value: u => u.identifier },
+    { label: 'Nom',             value: u => u.lastname   || '' },
+    { label: 'Prénom',          value: u => u.firstname  || '' },
+    { label: 'Rôle',            value: u => u.role === 'admin' ? 'Administrateur' : 'Employé' },
+    { label: 'Équipe',          value: u => u.team_name     || '' },
+    { label: 'Contrat',         value: u => u.contract_name || '' },
+    { label: "Date d'entrée",   value: u => u.entry_date ? String(u.entry_date).slice(0, 10) : '' },
+    { label: 'CP acquis',       value: u => (parseFloat(u.accrued_cp || 0) + parseFloat(u.cp_balance || 0)).toFixed(1) },
+    { label: 'CP pris',         value: u => parseFloat(u.taken_days || 0).toFixed(1) },
+    { label: 'CP restants',     value: u => (parseFloat(u.accrued_cp || 0) + parseFloat(u.cp_balance || 0) - parseFloat(u.taken_days || 0)).toFixed(1) },
+    { label: 'RTT attribués',   value: u => parseFloat(u.rtt_balance     || 0).toFixed(1) },
+    { label: 'RTT pris',        value: u => parseFloat(u.taken_rtt_days  || 0).toFixed(1) },
+    { label: 'RTT restants',    value: u => (parseFloat(u.rtt_balance || 0) - parseFloat(u.taken_rtt_days || 0)).toFixed(1) },
+    { label: 'Sans-solde pris', value: u => parseFloat(u.taken_unpaid_days || 0).toFixed(1) },
+  ];
+
+  res.setHeader('Content-Disposition', 'attachment; filename="salaries.csv"');
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.send(toCSV(dec, USER_COLS));
+});
+
+// Employé : export congés personnels CSV
+app.get('/api/me/leaves/export', auth(['admin', 'employee']), async (req, res) => {
+  const { rows } = await pool.query(`
+    SELECT lr.*,
+           u.identifier AS user_identifier,
+           u.firstname  AS user_firstname,
+           u.lastname   AS user_lastname,
+           u.name       AS user_name,
+           t.name       AS team_name
+    FROM leave_requests lr
+    JOIN  users u ON u.id = lr.user_id
+    LEFT JOIN teams t ON t.id = u.team_id
+    WHERE lr.user_id = $1
+    ORDER BY lr.start_date DESC
+  `, [req.user.id]);
+
+  const dec = rows.map(r => ({
+    ...r,
+    user_firstname: decrypt(r.user_firstname),
+    user_lastname:  decrypt(r.user_lastname),
+    user_name:      decrypt(r.user_name),
+  }));
+
+  res.setHeader('Content-Disposition', 'attachment; filename="mes-conges.csv"');
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.send(toCSV(dec, LEAVE_COLS));
+});
+
 // ── Health check ───────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
@@ -1110,7 +1958,24 @@ app.use((err, req, res, _next) => {
   res.status(500).json({ error: 'Erreur serveur interne' });
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`🚀  API démarrée sur http://localhost:${PORT}`);
-});
+export { app };
+
+if (process.env.NODE_ENV !== 'test') {
+  const PORT     = process.env.PORT || 3000;
+  const certPath = '/app/certs/cert.pem';
+  const keyPath  = '/app/certs/key.pem';
+
+  if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {
+    const creds = {
+      cert: fs.readFileSync(certPath),
+      key:  fs.readFileSync(keyPath),
+    };
+    https.createServer(creds, app).listen(PORT, () =>
+      console.log(`🔒  API sécurisée (HTTPS) sur https://localhost:${PORT}`)
+    );
+  } else {
+    app.listen(PORT, () =>
+      console.log(`🚀  API démarrée (HTTP) sur http://localhost:${PORT}`)
+    );
+  }
+}
