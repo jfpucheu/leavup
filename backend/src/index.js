@@ -395,6 +395,42 @@ function countOuvres(startStr, endStr) {
 }
 
 /**
+ * Compte les jours ouvrables (lundi–samedi, hors dimanches et jours fériés) entre deux dates incluses.
+ * @param {string} startStr  YYYY-MM-DD
+ * @param {string} endStr    YYYY-MM-DD
+ * @returns {number}
+ */
+function countOuvrables(startStr, endStr) {
+  const d0 = new Date(startStr + 'T00:00:00Z');
+  const d1 = new Date(endStr   + 'T00:00:00Z');
+  if (d0 > d1) return 0;
+  const years = new Set();
+  for (let d = new Date(d0); d <= d1; d.setUTCDate(d.getUTCDate() + 1))
+    years.add(d.getUTCFullYear());
+  const holidays = new Set([...years].flatMap(y => [...getFrenchHolidays(y)]));
+  let count = 0;
+  for (let d = new Date(d0); d <= d1; d.setUTCDate(d.getUTCDate() + 1)) {
+    const dow = d.getUTCDay(); // 0=dim
+    if (dow !== 0 && !holidays.has(d.toISOString().slice(0, 10)))
+      count++;
+  }
+  return count;
+}
+
+/**
+ * Sélectionne la fonction de comptage selon le type de décompte de l'organisation.
+ * @param {string} startStr
+ * @param {string} endStr
+ * @param {'ouvre'|'ouvrable'} dayCountType
+ * @returns {number}
+ */
+function countDays(startStr, endStr, dayCountType) {
+  return dayCountType === 'ouvrable'
+    ? countOuvrables(startStr, endStr)
+    : countOuvres(startStr, endStr);
+}
+
+/**
  * Retourne les bornes (ISO string) de la période de référence courante.
  * @param {'civil'|'reference'} leavePeriod
  * @returns {{ start: string, end: string }}
@@ -614,8 +650,11 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
       contactFirstname:        decrypt(org.contact_firstname) || null,
       contactLastname:         decrypt(org.contact_lastname)  || null,
       contactEmail:            decrypt(org.contact_email)     || null,
-      allowUnpaidLeave:        org.allow_unpaid_leave         || false,
-      allowUnpaidWhenExhausted:org.allow_unpaid_when_exhausted|| false,
+      allowUnpaidLeave:        org.allow_unpaid_leave          || false,
+      allowUnpaidWhenExhausted:org.allow_unpaid_when_exhausted || false,
+      dayCountType:            org.day_count_type              || 'ouvre',
+      remoteMaxPerWeek:        org.remote_max_per_week  ?? -1,
+      remoteMaxPerMonth:       org.remote_max_per_month ?? -1,
       plan:                    org.plan || 'free',
     },
   });
@@ -669,10 +708,18 @@ app.post('/api/register', registerLimiter, async (req, res) => {
       [orgName.trim(), slug, encContact.contact_firstname, encContact.contact_lastname, encContact.contact_email]
     );
     await client.query(
-      `INSERT INTO users (org_id, identifier, name, firstname, lastname, email, email_hmac, password_hash, role, annual_days)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'admin',30)`,
+      `INSERT INTO users (org_id, identifier, name, firstname, lastname, email, email_hmac, password_hash, role, annual_days, consent_date)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'admin',30,NOW())`,
       [org.id, adminId, encAdmin.name, encAdmin.firstname, encAdmin.lastname, encAdmin.email, emailHmac(adminEmail), hash]
     );
+    // Seed des événements familiaux légaux (Art. L3142-1)
+    for (const ev of DEFAULT_FAMILY_EVENTS) {
+      await client.query(
+        `INSERT INTO family_event_types (org_id, event_key, label, days)
+         VALUES ($1,$2,$3,$4) ON CONFLICT (org_id, event_key) DO NOTHING`,
+        [org.id, ev.event_key, ev.label, ev.days]
+      );
+    }
     await client.query('COMMIT');
     res.status(201).json({ ok: true, slug, identifier: adminId });
 
@@ -682,14 +729,10 @@ app.post('/api/register', registerLimiter, async (req, res) => {
         if (u) sendWelcomeEmail({ user: { id: u.id, firstname: adminFirstname, lastname: adminLastname, email: adminEmail, identifier: adminId }, org, adminName: 'Leavup', plainPassword: adminPassword });
       }).catch(e => console.error('Welcome email register:', e));
 
-    // Notification superadmin
-    getSmtpConfig().then(cfg => {
-      const to = cfg.from || process.env.SMTP_FROM;
-      if (!to) return;
-      sendMail(to, `Nouvelle entreprise — ${orgName}`, emailNewOrgHtml({
-        orgName, slug, adminFirstname, adminLastname, adminEmail, adminId, createdAt: new Date(),
-      })).catch(e => console.error('Superadmin notify register:', e));
-    }).catch(e => console.error('Superadmin notify config:', e));
+    // Notification à contact@leavup.com à chaque création d'organisation
+    sendMail('contact@leavup.com', `Nouvelle entreprise — ${orgName}`, emailNewOrgHtml({
+      orgName, slug, adminFirstname, adminLastname, adminEmail, adminId, createdAt: new Date(),
+    })).catch(e => console.error('Notify contact@leavup.com register:', e));
   } catch (e) {
     await client.query('ROLLBACK');
     if (e.code === '23505') return res.status(409).json({ error: 'Ce nom d\'entreprise est déjà utilisé' });
@@ -853,12 +896,13 @@ app.delete('/api/orgs/:id', auth(['superadmin']), async (req, res) => {
 
 app.get('/api/users', auth(['admin']), async (req, res) => {
   const { rows: [orgRow] } = await pool.query(
-    'SELECT leave_period, leave_grant_mode FROM organizations WHERE id = $1',
+    'SELECT leave_period, leave_grant_mode, day_count_type FROM organizations WHERE id = $1',
     [req.user.orgId]
   );
   const orgSettings = {
     leavePeriod:    orgRow?.leave_period    || 'civil',
     leaveGrantMode: orgRow?.leave_grant_mode || 'progressive',
+    dayCountType:   orgRow?.day_count_type  || 'ouvre',
   };
   const { start: periodStart, end: periodEnd } = getPeriodBounds(orgSettings.leavePeriod);
 
@@ -937,6 +981,11 @@ app.post('/api/users', auth(['admin']), async (req, res) => {
 
   const fullName = [firstname, lastname].filter(Boolean).join(' ').trim();
   const hash = await bcrypt.hash(password, 10);
+  // Nombre de jours annuels selon le type de décompte de l'organisation
+  const { rows: [orgDct] } = await pool.query(
+    'SELECT day_count_type FROM organizations WHERE id = $1', [req.user.orgId]
+  );
+  const defaultAnnualDays = (orgDct?.day_count_type === 'ouvrable') ? 30 : 25;
   // Chiffrement des champs PII avant insertion
   const enc = encryptUser({
     name: fullName, firstname: firstname.trim(), lastname: lastname.trim(),
@@ -950,7 +999,7 @@ app.post('/api/users', auth(['admin']), async (req, res) => {
          (org_id, identifier, name, firstname, lastname, password_hash, role, annual_days,
           phone, email, email_hmac, address_street, address_city, address_zip, address_country,
           entry_date, contract_id, cp_balance, rtt_balance, auto_accumulate, team_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,30, $8,$9,$10,$11,$12,$13,$14, $15,$16,$17,$18,$19,$20)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$21, $8,$9,$10,$11,$12,$13,$14, $15,$16,$17,$18,$19,$20)
        RETURNING id, identifier, name, firstname, lastname, role, annual_days,
                  phone, email, address_street, address_city, address_zip, address_country,
                  entry_date, contract_id, cp_balance, rtt_balance, auto_accumulate, team_id`,
@@ -959,7 +1008,7 @@ app.post('/api/users', auth(['admin']), async (req, res) => {
        enc.phone, enc.email, emailHmac(email),
        enc.address_street, enc.address_city, enc.address_zip, enc.address_country,
        entryDate || null, contractId || null, cpBalance, rttBalance, autoAccumulate,
-       teamId || null]
+       teamId || null, defaultAnnualDays]
     );
     res.status(201).json({ ...decryptUser(user), taken_days: 0 });
 
@@ -983,6 +1032,128 @@ app.post('/api/users', auth(['admin']), async (req, res) => {
       return res.status(409).json({ error: 'Cet identifiant est déjà utilisé' });
     throw e;
   }
+});
+
+// ── Import CSV des salariés ──────────────────────────────────────────────────
+// Colonnes attendues : identifier, firstname, lastname, email, password,
+//                      entry_date (YYYY-MM-DD), cp_balance, rtt_balance
+// Les colonnes optionnelles peuvent être vides.
+app.post('/api/users/import', auth(['admin']), async (req, res) => {
+  const { rows: csvRows } = req.body; // tableau d'objets parsé côté client
+  if (!Array.isArray(csvRows) || csvRows.length === 0)
+    return res.status(400).json({ error: 'Aucune ligne fournie' });
+  if (csvRows.length > 200)
+    return res.status(400).json({ error: 'Maximum 200 salariés par import' });
+
+  // Vérif limite plan
+  const { rows: [planInfo] } = await pool.query(
+    `SELECT o.plan, COUNT(u.id)::int AS user_count
+     FROM organizations o LEFT JOIN users u ON u.org_id = o.id
+     WHERE o.id = $1 GROUP BY o.plan`, [req.user.orgId]
+  );
+  const planLimit = PLAN_LIMITS[planInfo?.plan] ?? 5;
+  const remaining = planLimit - (planInfo?.user_count ?? 0);
+  if (csvRows.length > remaining)
+    return res.status(403).json({
+      error: `Votre plan autorise ${planLimit} utilisateurs, il en reste ${remaining} disponibles. Import de ${csvRows.length} impossible.`,
+      planLimit: true,
+    });
+
+  const { rows: [orgInfo] } = await pool.query(
+    'SELECT day_count_type, slug FROM organizations WHERE id = $1', [req.user.orgId]
+  );
+  const defaultAnnualDays = (orgInfo?.day_count_type === 'ouvrable') ? 30 : 25;
+  const slugPart = (orgInfo?.slug || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 2);
+
+  // Génère un identifiant unique : SLUGINITIALES-XXXX
+  const genIdentifier = async (client, firstname, lastname) => {
+    const initials = ((firstname[0] || '') + (lastname[0] || '')).toUpperCase();
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const rand4 = crypto.randomBytes(2).toString('hex').toUpperCase().slice(0, 4);
+      const candidate = `${slugPart}${initials}-${rand4}`;
+      const { rows } = await client.query(
+        'SELECT 1 FROM users WHERE org_id=$1 AND identifier=$2', [req.user.orgId, candidate]
+      );
+      if (rows.length === 0) return candidate;
+    }
+    throw new Error('Impossible de générer un identifiant unique');
+  };
+
+  // Récupérer org + admin une fois pour les emails
+  const { rows: [org] } = await pool.query(
+    'SELECT id, slug FROM organizations WHERE id = $1', [req.user.orgId]
+  );
+  const { rows: [adminUser] } = await pool.query(
+    'SELECT firstname, lastname, name FROM users WHERE id = $1', [req.user.id]
+  );
+  const decAdmin = decryptUser(adminUser);
+  const adminName = decAdmin
+    ? [decAdmin.firstname, decAdmin.lastname].filter(Boolean).join(' ') || decAdmin.name
+    : 'L\'administrateur';
+
+  const results = { created: 0, errors: [], identifiers: [] };
+  const toEmail = []; // liste des salariés à notifier après commit
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    for (let i = 0; i < csvRows.length; i++) {
+      const row = csvRows[i];
+      const lineNum    = i + 2; // ligne 1 = en-tête
+      const firstname  = (row.firstname  || '').trim();
+      const lastname   = (row.lastname   || '').trim();
+      const email      = (row.email      || '').trim() || null;
+      const password   = (row.password   || '').trim();
+      const entryDate  = (row.entry_date || '').trim() || null;
+      const cpBalance  = parseFloat(row.cp_balance)  || 0;
+      const rttBalance = parseFloat(row.rtt_balance) || 0;
+
+      if (!firstname && !lastname) {
+        results.errors.push({ line: lineNum, error: 'Prénom ou nom requis' });
+        continue;
+      }
+      if (!password || password.length < 8) {
+        results.errors.push({ line: lineNum, name: `${firstname} ${lastname}`.trim(), error: 'Mot de passe manquant ou < 8 caractères' });
+        continue;
+      }
+      const identifier = await genIdentifier(client, firstname, lastname);
+      const fullName = [firstname, lastname].filter(Boolean).join(' ').trim();
+      const hash = await bcrypt.hash(password, 10);
+      const enc  = encryptUser({ name: fullName, firstname, lastname, email, phone: null,
+        address_street: null, address_city: null, address_zip: null, address_country: 'France' });
+      try {
+        const { rows: [inserted] } = await client.query(
+          `INSERT INTO users
+             (org_id, identifier, name, firstname, lastname, password_hash, role, annual_days,
+              email, email_hmac, entry_date, cp_balance, rtt_balance)
+           VALUES ($1,$2,$3,$4,$5,$6,'employee',$7,$8,$9,$10,$11,$12)
+           RETURNING id`,
+          [req.user.orgId, identifier, enc.name, enc.firstname, enc.lastname, hash,
+           defaultAnnualDays, enc.email, emailHmac(email), entryDate, cpBalance, rttBalance]
+        );
+        results.created++;
+        results.identifiers.push({ name: fullName, identifier, email });
+        if (email) {
+          toEmail.push({ id: inserted.id, identifier, firstname, lastname, email, plainPassword: password });
+        }
+      } catch (e) {
+        results.errors.push({ line: lineNum, name: fullName, error: e.message });
+      }
+    }
+    await client.query('COMMIT');
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+
+  // Envoi emails de bienvenue en arrière-plan, après commit
+  for (const u of toEmail) {
+    sendWelcomeEmail({ user: u, org, adminName, plainPassword: u.plainPassword })
+      .catch(err => console.error(`Email bienvenue import (${u.identifier}):`, err));
+  }
+
+  res.json(results);
 });
 
 app.put('/api/users/:id', auth(['admin']), async (req, res) => {
@@ -1159,21 +1330,16 @@ app.post('/api/leaves', auth(['employee']), async (req, res) => {
   const { startDate, endDate, comment, leaveType = 'paid', period = 'full' } = req.body;
   if (!startDate || !endDate)
     return res.status(400).json({ error: 'startDate et endDate sont obligatoires' });
-  if (!['paid', 'unpaid', 'rtt'].includes(leaveType))
+  if (!['paid', 'unpaid', 'rtt', 'remote', 'event'].includes(leaveType))
     return res.status(400).json({ error: 'Type de congé invalide' });
   if (!['full', 'am', 'pm'].includes(period))
     return res.status(400).json({ error: 'Période invalide' });
 
-  // ── Calcul des jours (backend est autoritaire) ───────────────────────────
-  // Demi-journée = 0.5j fixe ; pleine journée = comptage ouvrés réel (hors week-end + fériés)
-  const days = (period !== 'full') ? 0.5 : countOuvres(startDate, endDate);
-  if (days <= 0)
-    return res.status(400).json({ error: 'La période sélectionnée ne contient aucun jour ouvré.' });
-
   // ── Paramètres de l'organisation ────────────────────────────────────────
   const { rows: [org] } = await pool.query(
     `SELECT allow_unpaid_leave, allow_unpaid_when_exhausted,
-            leave_period, leave_grant_mode, annual_days
+            leave_period, leave_grant_mode, annual_days, day_count_type,
+            remote_max_per_week, remote_max_per_month
      FROM organizations WHERE id = $1`,
     [req.user.orgId]
   );
@@ -1181,7 +1347,14 @@ app.post('/api/leaves', auth(['employee']), async (req, res) => {
     leavePeriod:    org.leave_period     || 'civil',
     leaveGrantMode: org.leave_grant_mode || 'progressive',
     annualDays:     org.annual_days      || 30,
+    dayCountType:   org.day_count_type   || 'ouvre',
   };
+
+  // ── Calcul des jours (backend est autoritaire) ───────────────────────────
+  // Demi-journée = 0.5j fixe ; pleine journée = comptage réel selon le type de l'org
+  const days = (period !== 'full') ? 0.5 : countDays(startDate, endDate, orgSettings.dayCountType);
+  if (days <= 0)
+    return res.status(400).json({ error: `La période sélectionnée ne contient aucun jour ${orgSettings.dayCountType === 'ouvrable' ? 'ouvrable' : 'ouvré'}.` });
   const { start: periodStart, end: periodEnd } = getPeriodBounds(orgSettings.leavePeriod);
 
   // ── Soldes courants (limités à la période de référence) ──────────────────
@@ -1216,10 +1389,51 @@ app.post('/api/leaves', auth(['employee']), async (req, res) => {
 
   // ── Contrôle durée congé principal (Art. L3141-17) ──────────────────────
   const warnings = [];
-  if (leaveType === 'paid' && days > 20)
-    warnings.push('Attention : un congé de plus de 20 jours ouvrés consécutifs est soumis à accord de l\'employeur (Art. L3141-17).');
+  const maxConsecutive = orgSettings.dayCountType === 'ouvrable' ? 24 : 20;
+  if (leaveType === 'paid' && days > maxConsecutive)
+    warnings.push(`Attention : un congé de plus de ${maxConsecutive} jours ${orgSettings.dayCountType === 'ouvrable' ? 'ouvrables' : 'ouvrés'} consécutifs est soumis à accord de l'employeur (Art. L3141-17).`);
 
-  if (leaveType === 'rtt') {
+  if (leaveType === 'remote') {
+    // Télétravail — vérification des limites hebdomadaire / mensuelle
+    const maxWeek  = org.remote_max_per_week  ?? -1;
+    const maxMonth = org.remote_max_per_month ?? -1;
+    if (maxWeek !== -1 || maxMonth !== -1) {
+      const d = new Date(startDate + 'T00:00:00Z');
+      const dow = d.getUTCDay(); // 0=dim … 6=sam
+      const mondayOffset = dow === 0 ? -6 : 1 - dow;
+      const wStart = new Date(d); wStart.setUTCDate(d.getUTCDate() + mondayOffset);
+      const wEnd   = new Date(wStart); wEnd.setUTCDate(wStart.getUTCDate() + 6);
+      const mStart = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
+      const mEnd   = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0));
+
+      const { rows: [counts] } = await pool.query(
+        `SELECT
+           COALESCE(SUM(days) FILTER (WHERE start_date >= $2 AND start_date <= $3), 0)::numeric AS week_days,
+           COALESCE(SUM(days) FILTER (WHERE start_date >= $4 AND start_date <= $5), 0)::numeric AS month_days
+         FROM leave_requests
+         WHERE user_id = $1 AND leave_type = 'remote' AND status = 'approved'`,
+        [req.user.id,
+         wStart.toISOString().slice(0, 10), wEnd.toISOString().slice(0, 10),
+         mStart.toISOString().slice(0, 10), mEnd.toISOString().slice(0, 10)]
+      );
+
+      const usedWeek  = parseFloat(counts.week_days);
+      const usedMonth = parseFloat(counts.month_days);
+      if (maxWeek !== -1 && usedWeek + days > maxWeek)
+        return res.status(400).json({ error: `Limite de télétravail atteinte : ${maxWeek}j/semaine autorisé${maxWeek > 1 ? 's' : ''} (${usedWeek.toFixed(1)}j déjà posés cette semaine).` });
+      if (maxMonth !== -1 && usedMonth + days > maxMonth)
+        return res.status(400).json({ error: `Limite de télétravail atteinte : ${maxMonth}j/mois autorisé${maxMonth > 1 ? 's' : ''} (${usedMonth.toFixed(1)}j déjà posés ce mois).` });
+    }
+  } else if (leaveType === 'event') {
+    // Événement familial — pas de décompte de solde, vérification que l'event_key est valide
+    const { eventKey } = req.body;
+    if (!eventKey) return res.status(400).json({ error: 'eventKey est obligatoire pour un congé événement familial' });
+    const { rows: [evType] } = await pool.query(
+      `SELECT days FROM family_event_types WHERE org_id=$1 AND event_key=$2 AND active=true`,
+      [req.user.orgId, eventKey]
+    );
+    if (!evType) return res.status(400).json({ error: 'Événement familial invalide ou désactivé' });
+  } else if (leaveType === 'rtt') {
     if (availableRTT < days)
       return res.status(400).json({ error: `Solde RTT insuffisant (${availableRTT.toFixed(1)}j disponibles)` });
   } else if (leaveType === 'unpaid') {
@@ -1238,18 +1452,17 @@ app.post('/api/leaves', auth(['employee']), async (req, res) => {
   const leaveYear = new Date(startDate + 'T00:00:00Z').getUTCFullYear();
   const mainStart = `${leaveYear}-05-01`, mainEnd = `${leaveYear}-10-31`;
   let newOutside = 0;
-  if (leaveType === 'paid' && period === 'full') {
+  if (leaveType === 'paid' && leaveType !== 'remote' && period === 'full') {
+    const dct = orgSettings.dayCountType;
     // Jours de la nouvelle demande qui tombent hors période principale
-    newOutside = countOuvres(startDate, endDate < mainStart ? endDate : mainStart) +
-                 (endDate > mainEnd ? countOuvres(mainEnd < startDate ? startDate : mainEnd, endDate) : 0);
-    // Correction : simple check si la plage entière est hors période
     const s = new Date(startDate + 'T00:00:00Z'), e = new Date(endDate + 'T00:00:00Z');
     const ms = new Date(mainStart + 'T00:00:00Z'), me = new Date(mainEnd + 'T00:00:00Z');
     if (e < ms || s > me) newOutside = days;
     else if (s >= ms && e <= me) newOutside = 0;
-    else newOutside = days - countOuvres(
+    else newOutside = days - countDays(
       s < ms ? mainStart : startDate,
-      e > me ? mainEnd   : endDate
+      e > me ? mainEnd   : endDate,
+      dct
     );
   }
   const totalOutside = parseFloat(bal?.days_outside_main || 0) + Math.max(0, newOutside);
@@ -1257,10 +1470,11 @@ app.post('/api/leaves', auth(['employee']), async (req, res) => {
   if (fractBonus > 0 && leaveType === 'paid')
     warnings.push(`Fractionnement (Art. L3141-19) : ${fractBonus} jour${fractBonus > 1 ? 's' : ''} supplémentaire${fractBonus > 1 ? 's' : ''} dû${fractBonus > 1 ? 's' : ''} au salarié pour congés hors période principale.`);
 
+  const { eventKey } = req.body;
   const { rows: [leave] } = await pool.query(
-    `INSERT INTO leave_requests (org_id, user_id, start_date, end_date, days, comment, leave_type, period)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-    [req.user.orgId, req.user.id, startDate, endDate, days, comment || null, leaveType, period]
+    `INSERT INTO leave_requests (org_id, user_id, start_date, end_date, days, comment, leave_type, period, event_key)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+    [req.user.orgId, req.user.id, startDate, endDate, days, comment || null, leaveType, period, eventKey || null]
   );
   res.status(201).json({ ...leave, warnings: warnings.length ? warnings : undefined });
 
@@ -1392,7 +1606,9 @@ app.get('/api/settings', auth(['admin']), async (req, res) => {
     `SELECT o.name, o.slug, o.plan, o.alert_threshold,
             o.allow_unpaid_leave, o.allow_unpaid_when_exhausted,
             o.notify_on_submit, o.notify_on_approve, o.notify_on_reject, o.notify_admin_new,
-            o.leave_period, o.leave_grant_mode,
+            o.leave_period, o.leave_grant_mode, o.day_count_type,
+            o.remote_max_per_week, o.remote_max_per_month,
+            o.cp_carryover_max, o.cp_carryover_expires,
             (SELECT COUNT(*)::int FROM users u WHERE u.org_id = o.id) AS user_count
      FROM organizations o WHERE o.id = $1`,
     [req.user.orgId]
@@ -1409,36 +1625,52 @@ app.get('/api/settings', auth(['admin']), async (req, res) => {
     notifyOnApprove:          org.notify_on_approve ?? true,
     notifyOnReject:           org.notify_on_reject  ?? true,
     notifyAdminNew:           org.notify_admin_new  ?? true,
-    leavePeriod:              org.leave_period      || 'civil',
-    leaveGrantMode:           org.leave_grant_mode  || 'progressive',
+    leavePeriod:              org.leave_period        || 'civil',
+    leaveGrantMode:           org.leave_grant_mode    || 'progressive',
+    dayCountType:             org.day_count_type      || 'ouvre',
+    remoteMaxPerWeek:         org.remote_max_per_week   ?? -1,
+    remoteMaxPerMonth:        org.remote_max_per_month  ?? -1,
+    cpCarryoverMax:           org.cp_carryover_max      ?? 0,
+    cpCarryoverExpires:       org.cp_carryover_expires  ?? 12,
   });
 });
 
 app.put('/api/settings', auth(['admin']), async (req, res) => {
   const { alertThreshold, allowUnpaidLeave, allowUnpaidWhenExhausted,
           notifyOnSubmit, notifyOnApprove, notifyOnReject, notifyAdminNew,
-          leavePeriod, leaveGrantMode } = req.body;
+          leavePeriod, leaveGrantMode, dayCountType,
+          remoteMaxPerWeek, remoteMaxPerMonth,
+          cpCarryoverMax, cpCarryoverExpires } = req.body;
   if (!alertThreshold || alertThreshold < 1)
     return res.status(400).json({ error: 'Seuil invalide' });
-  const period = ['civil', 'reference'].includes(leavePeriod) ? leavePeriod : 'civil';
-  const grant  = ['progressive', 'advance'].includes(leaveGrantMode) ? leaveGrantMode : 'progressive';
+  const period    = ['civil', 'reference'].includes(leavePeriod) ? leavePeriod : 'civil';
+  const grant     = ['progressive', 'advance'].includes(leaveGrantMode) ? leaveGrantMode : 'progressive';
+  const countType = ['ouvre', 'ouvrable'].includes(dayCountType) ? dayCountType : 'ouvre';
+  const remWeek     = Number.isInteger(remoteMaxPerWeek)  && remoteMaxPerWeek  >= -1 ? remoteMaxPerWeek  : -1;
+  const remMonth    = Number.isInteger(remoteMaxPerMonth) && remoteMaxPerMonth >= -1 ? remoteMaxPerMonth : -1;
+  const carryMax    = Number.isInteger(cpCarryoverMax)    && cpCarryoverMax    >= -1 ? cpCarryoverMax    : 0;
+  const carryExpiry = Number.isInteger(cpCarryoverExpires) && cpCarryoverExpires >= 0 ? cpCarryoverExpires : 12;
   await pool.query(
     `UPDATE organizations
      SET alert_threshold = $1, allow_unpaid_leave = $2, allow_unpaid_when_exhausted = $3,
          notify_on_submit = $4, notify_on_approve = $5, notify_on_reject = $6, notify_admin_new = $7,
-         leave_period = $8, leave_grant_mode = $9
-     WHERE id = $10`,
+         leave_period = $8, leave_grant_mode = $9, day_count_type = $10,
+         remote_max_per_week = $11, remote_max_per_month = $12,
+         cp_carryover_max = $13, cp_carryover_expires = $14
+     WHERE id = $15`,
     [alertThreshold, !!allowUnpaidLeave, !!allowUnpaidWhenExhausted,
      !!notifyOnSubmit, !!notifyOnApprove, !!notifyOnReject, !!notifyAdminNew,
-     period, grant, req.user.orgId]
+     period, grant, countType, remWeek, remMonth, carryMax, carryExpiry, req.user.orgId]
   );
   res.json({ alertThreshold, allowUnpaidLeave: !!allowUnpaidLeave, allowUnpaidWhenExhausted: !!allowUnpaidWhenExhausted,
     notifyOnSubmit: !!notifyOnSubmit, notifyOnApprove: !!notifyOnApprove,
     notifyOnReject: !!notifyOnReject, notifyAdminNew: !!notifyAdminNew,
-    leavePeriod: period, leaveGrantMode: grant });
+    leavePeriod: period, leaveGrantMode: grant, dayCountType: countType,
+    remoteMaxPerWeek: remWeek, remoteMaxPerMonth: remMonth,
+    cpCarryoverMax: carryMax, cpCarryoverExpires: carryExpiry });
 });
 
-const PLAN_LIMITS = { free: 10, team: 30, enterprise: 999999 };
+const PLAN_LIMITS = { free: 10, team: 30, business: 50, enterprise: 999999 };
 
 app.put('/api/settings/plan', auth(['admin']), async (req, res) => {
   const { plan } = req.body;
@@ -1478,12 +1710,13 @@ app.put('/api/settings/logo', auth(['admin']), async (req, res) => {
 
 app.get('/api/me', auth(['admin', 'employee']), async (req, res) => {
   const { rows: [orgRow] } = await pool.query(
-    'SELECT leave_period, leave_grant_mode FROM organizations WHERE id = $1',
+    'SELECT leave_period, leave_grant_mode, day_count_type FROM organizations WHERE id = $1',
     [req.user.orgId]
   );
   const orgSettings = {
     leavePeriod:    orgRow?.leave_period    || 'civil',
     leaveGrantMode: orgRow?.leave_grant_mode || 'progressive',
+    dayCountType:   orgRow?.day_count_type  || 'ouvre',
   };
   const { start: periodStart, end: periodEnd } = getPeriodBounds(orgSettings.leavePeriod);
 
@@ -1491,7 +1724,7 @@ app.get('/api/me', auth(['admin', 'employee']), async (req, res) => {
     `SELECT
        u.id, u.identifier, u.name, u.firstname, u.lastname, u.role, u.annual_days,
        u.phone, u.email, u.address_street, u.address_city, u.address_zip, u.address_country,
-       u.entry_date, u.cp_balance, u.rtt_balance, u.auto_accumulate, u.team_id,
+       u.entry_date, u.cp_balance, u.rtt_balance, u.auto_accumulate, u.team_id, u.calendar_token,
        mt.name AS team_name,
        lt.id   AS led_team_id,
        lt.name AS led_team_name,
@@ -1517,7 +1750,73 @@ app.get('/api/me', auth(['admin', 'employee']), async (req, res) => {
   );
   if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
   const accrued_cp = computeAccruedCP(user.entry_date, { ...orgSettings, annualDays: user.annual_days, autoAccumulate: user.auto_accumulate });
-  res.json({ ...decryptUser(user), taken_days: parseInt(user.taken_days), accrued_cp });
+  res.json({ ...decryptUser(user), taken_days: parseInt(user.taken_days), accrued_cp, calendarToken: user.calendar_token });
+});
+
+// ── Calendrier iCal personnel ───────────────────────────────────────────────
+
+app.get('/api/calendar/:token.ics', async (req, res) => {
+  const { token } = req.params;
+  const { rows: [user] } = await pool.query(
+    'SELECT id, org_id, firstname, lastname, name FROM users WHERE calendar_token = $1',
+    [token]
+  );
+  if (!user) return res.status(404).send('Calendrier introuvable');
+
+  const { rows: leaves } = await pool.query(
+    `SELECT start_date, end_date, days, leave_type, period, status
+     FROM leave_requests
+     WHERE user_id = $1 AND status = 'approved'
+     ORDER BY start_date DESC LIMIT 200`,
+    [user.id]
+  );
+
+  const pad = n => String(n).padStart(2, '0');
+  const icsDate = d => {
+    const dt = new Date(d);
+    return `${dt.getUTCFullYear()}${pad(dt.getUTCMonth()+1)}${pad(dt.getUTCDate())}`;
+  };
+  const addDay = d => {
+    const dt = new Date(d); dt.setUTCDate(dt.getUTCDate() + 1);
+    return dt.toISOString().slice(0, 10);
+  };
+  const typeLabel = t => ({ paid: 'Congé payé', unpaid: 'Sans solde', rtt: 'RTT', remote: 'Télétravail' }[t] || t);
+
+  const events = leaves.map(l => {
+    const uid = `${l.start_date}-${l.leave_type}-${user.id}@leavup.com`;
+    const summary = l.period === 'am' ? `${typeLabel(l.leave_type)} (matin)`
+                  : l.period === 'pm' ? `${typeLabel(l.leave_type)} (après-midi)`
+                  : `${typeLabel(l.leave_type)} — ${l.days}j`;
+    return [
+      'BEGIN:VEVENT',
+      `UID:${uid}`,
+      `DTSTART;VALUE=DATE:${icsDate(l.start_date)}`,
+      `DTEND;VALUE=DATE:${icsDate(addDay(l.end_date))}`,
+      `SUMMARY:${summary}`,
+      `STATUS:CONFIRMED`,
+      'END:VEVENT',
+    ].join('\r\n');
+  });
+
+  const displayName = decrypt(user.firstname) && decrypt(user.lastname)
+    ? `${decrypt(user.firstname)} ${decrypt(user.lastname)}`
+    : decrypt(user.name) || user.name;
+
+  const cal = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Leavup//FR',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    `X-WR-CALNAME:Congés ${displayName}`,
+    'X-WR-TIMEZONE:Europe/Paris',
+    ...events,
+    'END:VCALENDAR',
+  ].join('\r\n');
+
+  res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+  res.setHeader('Content-Disposition', 'inline; filename="leavup.ics"');
+  res.send(cal);
 });
 
 // ── Reset mot de passe ─────────────────────────────────────────────────────
@@ -1721,7 +2020,7 @@ app.get('/api/admin/export', auth(['admin']), async (req, res) => {
 
   const { rows: users } = await pool.query(
     `SELECT u.id, u.identifier, u.role, u.annual_days, u.cp_balance, u.rtt_balance,
-            u.entry_date, u.created_at,
+            u.entry_date, u.created_at, u.consent_date,
             u.name, u.firstname, u.lastname, u.phone, u.email,
             u.address_street, u.address_city, u.address_zip, u.address_country
      FROM users u WHERE u.org_id = $1 ORDER BY u.created_at`, [req.user.orgId]
@@ -1860,12 +2159,13 @@ app.get('/api/leaves/export', auth(['admin']), async (req, res) => {
 // Admin : export salariés CSV
 app.get('/api/users/export', auth(['admin']), async (req, res) => {
   const { rows: [orgRow] } = await pool.query(
-    'SELECT leave_period, leave_grant_mode FROM organizations WHERE id = $1',
+    'SELECT leave_period, leave_grant_mode, day_count_type FROM organizations WHERE id = $1',
     [req.user.orgId]
   );
   const orgSettings = {
     leavePeriod:    orgRow?.leave_period    || 'civil',
     leaveGrantMode: orgRow?.leave_grant_mode || 'progressive',
+    dayCountType:   orgRow?.day_count_type  || 'ouvre',
   };
   const { start: periodStart, end: periodEnd } = getPeriodBounds(orgSettings.leavePeriod);
 
@@ -1958,24 +2258,304 @@ app.use((err, req, res, _next) => {
   res.status(500).json({ error: 'Erreur serveur interne' });
 });
 
+// ── Événements familiaux légaux par défaut (Art. L3142-1 Code du travail) ────
+const DEFAULT_FAMILY_EVENTS = [
+  { event_key: 'marriage_self',    label: 'Mariage / PACS (salarié)',     days: 4 },
+  { event_key: 'marriage_child',   label: "Mariage d'un enfant",          days: 1 },
+  { event_key: 'birth',            label: 'Naissance / adoption',         days: 3 },
+  { event_key: 'death_spouse',     label: 'Décès conjoint / partenaire',  days: 3 },
+  { event_key: 'death_parent',     label: 'Décès parent / beau-parent',   days: 3 },
+  { event_key: 'death_child',      label: "Décès d'un enfant",            days: 5 },
+  { event_key: 'death_sibling',    label: 'Décès frère / sœur',           days: 3 },
+  { event_key: 'disability_child', label: 'Annonce handicap enfant',      days: 2 },
+];
+
+// ── Événements familiaux — CRUD ───────────────────────────────────────────────
+
+app.get('/api/family-events', auth(['admin', 'employee']), async (req, res) => {
+  const { rows } = await pool.query(
+    `SELECT id, event_key, label, days, active
+     FROM family_event_types WHERE org_id = $1 ORDER BY label`,
+    [req.user.orgId]
+  );
+  // Seed si l'org n'a pas encore d'événements (inscription avant la migration)
+  if (rows.length === 0) {
+    for (const ev of DEFAULT_FAMILY_EVENTS) {
+      await pool.query(
+        `INSERT INTO family_event_types (org_id, event_key, label, days)
+         VALUES ($1,$2,$3,$4) ON CONFLICT (org_id, event_key) DO NOTHING`,
+        [req.user.orgId, ev.event_key, ev.label, ev.days]
+      );
+    }
+    const { rows: seeded } = await pool.query(
+      `SELECT id, event_key, label, days, active FROM family_event_types
+       WHERE org_id = $1 ORDER BY label`, [req.user.orgId]
+    );
+    return res.json(seeded);
+  }
+  res.json(rows);
+});
+
+app.put('/api/family-events', auth(['admin']), async (req, res) => {
+  const { events } = req.body; // [{ event_key, label, days, active }]
+  if (!Array.isArray(events)) return res.status(400).json({ error: 'events doit être un tableau' });
+  for (const ev of events) {
+    if (!ev.event_key || !ev.label || ev.days == null)
+      return res.status(400).json({ error: 'event_key, label et days sont obligatoires' });
+    await pool.query(
+      `INSERT INTO family_event_types (org_id, event_key, label, days, active)
+       VALUES ($1,$2,$3,$4,$5)
+       ON CONFLICT (org_id, event_key) DO UPDATE
+         SET label = EXCLUDED.label, days = EXCLUDED.days, active = EXCLUDED.active`,
+      [req.user.orgId, ev.event_key, ev.label, parseFloat(ev.days), !!ev.active]
+    );
+  }
+  const { rows } = await pool.query(
+    `SELECT id, event_key, label, days, active FROM family_event_types
+     WHERE org_id = $1 ORDER BY label`, [req.user.orgId]
+  );
+  res.json(rows);
+});
+
+// ── Analytics ─────────────────────────────────────────────────────────────────
+
+app.get('/api/analytics', auth(['admin']), async (req, res) => {
+  const orgId = req.user.orgId;
+  const now = new Date();
+  const twelveMonthsAgo = new Date(now);
+  twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 11);
+  const since = `${twelveMonthsAgo.getUTCFullYear()}-${String(twelveMonthsAgo.getUTCMonth() + 1).padStart(2, '0')}-01`;
+
+  const [byMonth, byType, byTeam, balances, expiring] = await Promise.all([
+    // Absences par mois (12 derniers mois)
+    pool.query(`
+      SELECT to_char(date_trunc('month', start_date), 'YYYY-MM') AS month,
+             SUM(days)::numeric AS total_days,
+             COUNT(*)::int AS nb_requests
+      FROM leave_requests
+      WHERE org_id=$1 AND status='approved'
+        AND leave_type IN ('paid','rtt','unpaid','event')
+        AND start_date >= $2
+      GROUP BY 1 ORDER BY 1
+    `, [orgId, since]),
+
+    // Répartition par type
+    pool.query(`
+      SELECT leave_type, COUNT(*)::int AS nb, SUM(days)::numeric AS total_days
+      FROM leave_requests
+      WHERE org_id=$1 AND status='approved' AND start_date >= $2
+      GROUP BY leave_type ORDER BY total_days DESC
+    `, [orgId, since]),
+
+    // Absentéisme par équipe (12 derniers mois)
+    pool.query(`
+      SELECT t.name AS team_name,
+             COUNT(DISTINCT u.id)::int AS team_size,
+             COALESCE(SUM(lr.days) FILTER (
+               WHERE lr.status='approved' AND lr.leave_type IN ('paid','rtt','unpaid','event')
+                 AND lr.start_date >= $2
+             ), 0)::numeric AS total_days,
+             COUNT(lr.id) FILTER (
+               WHERE lr.status='approved' AND lr.leave_type IN ('paid','rtt','unpaid','event')
+                 AND lr.start_date >= $2
+             )::int AS nb_requests
+      FROM teams t
+      JOIN users u ON u.team_id = t.id
+      LEFT JOIN leave_requests lr ON lr.user_id = u.id
+      WHERE t.org_id = $1
+      GROUP BY t.id, t.name ORDER BY total_days DESC
+    `, [orgId, since]),
+
+    // Soldes moyens CP et RTT
+    pool.query(`
+      SELECT ROUND(AVG(cp_balance)::numeric, 1) AS avg_cp_balance,
+             ROUND(AVG(rtt_balance)::numeric, 1) AS avg_rtt_balance,
+             COUNT(*)::int AS employee_count
+      FROM users WHERE org_id=$1 AND role='employee'
+    `, [orgId]),
+
+    // Employés avec > 10j CP non pris (risque fin de période)
+    pool.query(`
+      SELECT u.firstname, u.lastname, u.name, u.cp_balance,
+             COALESCE(SUM(lr.days) FILTER (
+               WHERE lr.status='approved' AND lr.leave_type='paid'
+             ), 0)::numeric AS taken_paid
+      FROM users u
+      LEFT JOIN leave_requests lr ON lr.user_id = u.id
+      WHERE u.org_id=$1 AND u.role='employee'
+      GROUP BY u.id
+      HAVING u.cp_balance - COALESCE(SUM(lr.days) FILTER (
+               WHERE lr.status='approved' AND lr.leave_type='paid'
+             ), 0) > 10
+      ORDER BY (u.cp_balance - COALESCE(SUM(lr.days) FILTER (
+               WHERE lr.status='approved' AND lr.leave_type='paid'
+             ), 0)) DESC
+      LIMIT 10
+    `, [orgId]),
+  ]);
+
+  res.json({
+    byMonth:  byMonth.rows,
+    byType:   byType.rows,
+    byTeam:   byTeam.rows,
+    balances: balances.rows[0] || { avg_cp_balance: 0, avg_rtt_balance: 0, employee_count: 0 },
+    expiring: expiring.rows.map(r => ({
+      name:       decrypt(r.name) || r.name,
+      firstname:  decrypt(r.firstname) || r.firstname,
+      lastname:   decrypt(r.lastname) || r.lastname,
+      cp_balance: parseFloat(r.cp_balance),
+      taken_paid: parseFloat(r.taken_paid),
+    })),
+  });
+});
+
+// ── Report de jours non pris (carry-over) ─────────────────────────────────────
+
+app.get('/api/admin/carryover/preview', auth(['admin']), async (req, res) => {
+  const { rows: [orgRow] } = await pool.query(
+    `SELECT leave_period, leave_grant_mode, day_count_type, cp_carryover_max, cp_carryover_expires
+     FROM organizations WHERE id = $1`, [req.user.orgId]
+  );
+  if (!orgRow || orgRow.cp_carryover_max === 0)
+    return res.json({ enabled: false, employees: [] });
+
+  const orgSettings = {
+    leavePeriod:    orgRow.leave_period     || 'civil',
+    leaveGrantMode: orgRow.leave_grant_mode || 'progressive',
+    dayCountType:   orgRow.day_count_type   || 'ouvre',
+  };
+  const { start: pStart, end: pEnd } = getPeriodBounds(orgSettings.leavePeriod);
+
+  const { rows } = await pool.query(`
+    SELECT u.id, u.firstname, u.lastname, u.name, u.cp_balance, u.annual_days,
+           u.entry_date, u.auto_accumulate,
+           COALESCE(SUM(lr.days) FILTER (
+             WHERE lr.status='approved' AND lr.leave_type='paid'
+               AND lr.start_date >= $2 AND lr.start_date <= $3
+           ), 0)::numeric AS taken_paid
+    FROM users u
+    LEFT JOIN leave_requests lr ON lr.user_id = u.id
+    WHERE u.org_id=$1 AND u.role='employee'
+    GROUP BY u.id
+  `, [req.user.orgId, pStart, pEnd]);
+
+  const maxCarryover = orgRow.cp_carryover_max;
+  const employees = rows.map(u => {
+    const accrued    = computeAccruedCP(u.entry_date, { ...orgSettings, annualDays: u.annual_days, autoAccumulate: u.auto_accumulate });
+    const available  = accrued + parseFloat(u.cp_balance) - parseFloat(u.taken_paid);
+    const carryover  = maxCarryover === -1 ? Math.max(0, available) : Math.min(Math.max(0, available), maxCarryover);
+    return {
+      id:         u.id,
+      name:       decrypt(u.name) || u.name,
+      firstname:  decrypt(u.firstname) || u.firstname,
+      lastname:   decrypt(u.lastname) || u.lastname,
+      available:  Math.round(available * 10) / 10,
+      carryover:  Math.round(carryover * 10) / 10,
+    };
+  }).filter(u => u.carryover > 0);
+
+  res.json({ enabled: true, maxCarryover, employees });
+});
+
+app.post('/api/admin/carryover/apply', auth(['admin']), async (req, res) => {
+  const { rows: [orgRow] } = await pool.query(
+    `SELECT leave_period, leave_grant_mode, day_count_type, cp_carryover_max
+     FROM organizations WHERE id = $1`, [req.user.orgId]
+  );
+  if (!orgRow || orgRow.cp_carryover_max === 0)
+    return res.status(400).json({ error: 'Le report de jours est désactivé' });
+
+  const orgSettings = {
+    leavePeriod:    orgRow.leave_period     || 'civil',
+    leaveGrantMode: orgRow.leave_grant_mode || 'progressive',
+    dayCountType:   orgRow.day_count_type   || 'ouvre',
+  };
+  const { start: pStart, end: pEnd } = getPeriodBounds(orgSettings.leavePeriod);
+  const maxCarryover = orgRow.cp_carryover_max;
+
+  const { rows } = await pool.query(`
+    SELECT u.id, u.cp_balance, u.annual_days, u.entry_date, u.auto_accumulate,
+           COALESCE(SUM(lr.days) FILTER (
+             WHERE lr.status='approved' AND lr.leave_type='paid'
+               AND lr.start_date >= $2 AND lr.start_date <= $3
+           ), 0)::numeric AS taken_paid
+    FROM users u
+    LEFT JOIN leave_requests lr ON lr.user_id = u.id
+    WHERE u.org_id=$1 AND u.role='employee'
+    GROUP BY u.id
+  `, [req.user.orgId, pStart, pEnd]);
+
+  let applied = 0;
+  for (const u of rows) {
+    const accrued   = computeAccruedCP(u.entry_date, { ...orgSettings, annualDays: u.annual_days, autoAccumulate: u.auto_accumulate });
+    const available = accrued + parseFloat(u.cp_balance) - parseFloat(u.taken_paid);
+    const carryover = maxCarryover === -1 ? Math.max(0, available) : Math.min(Math.max(0, available), maxCarryover);
+    if (carryover > 0) {
+      // Remet cp_balance à carryover (les jours acquis de la nouvelle période commenceront de 0)
+      await pool.query('UPDATE users SET cp_balance = $1 WHERE id = $2', [carryover, u.id]);
+      applied++;
+    } else {
+      await pool.query('UPDATE users SET cp_balance = 0 WHERE id = $2', [u.id]);
+    }
+  }
+  res.json({ ok: true, applied });
+});
+
 export { app };
+
+// ── Migration automatique du schéma BDD ─────────────────────────────────────
+async function migrate() {
+  const schemaPath = '/app/schema.sql';
+  if (!fs.existsSync(schemaPath)) {
+    console.warn('⚠️  schema.sql introuvable — migration ignorée');
+    return;
+  }
+  const sql = fs.readFileSync(schemaPath, 'utf8');
+  const client = await pool.connect();
+  try {
+    await client.query(sql);
+    console.log('✅  Schéma BDD à jour');
+  } catch (err) {
+    console.error('❌  Erreur migration schéma :', err.message);
+    throw err;
+  } finally {
+    client.release();
+  }
+}
 
 if (process.env.NODE_ENV !== 'test') {
   const PORT     = process.env.PORT || 3000;
   const certPath = '/app/certs/cert.pem';
   const keyPath  = '/app/certs/key.pem';
 
-  if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {
-    const creds = {
-      cert: fs.readFileSync(certPath),
-      key:  fs.readFileSync(keyPath),
-    };
-    https.createServer(creds, app).listen(PORT, () =>
-      console.log(`🔒  API sécurisée (HTTPS) sur https://localhost:${PORT}`)
-    );
-  } else {
-    app.listen(PORT, () =>
-      console.log(`🚀  API démarrée (HTTP) sur http://localhost:${PORT}`)
-    );
-  }
+  // Attendre que Postgres soit prêt, puis migrer, puis démarrer
+  const startServer = () => {
+    if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {
+      const creds = { cert: fs.readFileSync(certPath), key: fs.readFileSync(keyPath) };
+      https.createServer(creds, app).listen(PORT, () =>
+        console.log(`🔒  API sécurisée (HTTPS) sur https://localhost:${PORT}`)
+      );
+    } else {
+      app.listen(PORT, () =>
+        console.log(`🚀  API démarrée (HTTP) sur http://localhost:${PORT}`)
+      );
+    }
+  };
+
+  const waitAndMigrate = async (retries = 10) => {
+    try {
+      await migrate();
+      startServer();
+    } catch (err) {
+      if (retries > 0) {
+        console.log(`⏳  Postgres pas encore prêt, nouvel essai dans 2s… (${retries} restants)`);
+        setTimeout(() => waitAndMigrate(retries - 1), 2000);
+      } else {
+        console.error('💥  Impossible de migrer la BDD après plusieurs tentatives');
+        process.exit(1);
+      }
+    }
+  };
+
+  waitAndMigrate();
 }

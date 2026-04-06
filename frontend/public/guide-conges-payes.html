@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Guide complet des congés payés en France 2026 — Leavup</title>
+  <meta name="description" content="Tout comprendre sur les congés payés en France : règles légales du Code du travail, calcul des droits, jours ouvrés vs ouvrables, fractionnement, jours fériés et cas particuliers. Guide 2026 complet et à jour." />
+  <link rel="canonical" href="https://leavup.com/guide-conges-payes" />
+  <meta name="robots" content="index, follow" />
+  <meta property="og:type"        content="article" />
+  <meta property="og:url"         content="https://leavup.com/guide-conges-payes" />
+  <meta property="og:title"       content="Guide complet des congés payés en France 2026 — Leavup" />
+  <meta property="og:description" content="Règles légales, calcul des droits, jours ouvrés vs ouvrables, fractionnement, jours fériés : le guide de référence sur les congés payés en France." />
+  <meta property="og:image"       content="https://leavup.com/og-image.png" />
+  <meta property="og:locale"      content="fr_FR" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Accueil", "item": "https://leavup.com/" },
+      { "@type": "ListItem", "position": 2, "name": "Guide des congés payés", "item": "https://leavup.com/guide-conges-payes" }
+    ]
+  }
+  </script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Combien de jours de congés payés un salarié acquiert-il par mois ?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Conformément à l'article L3141-3 du Code du travail, tout salarié acquiert 2,5 jours ouvrables de congés payés par mois de travail effectif, soit 30 jours ouvrables (ou 25 jours ouvrés) pour une année complète. Ce droit est ouvert dès le premier jour de travail, sans condition d'ancienneté."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Quelle est la différence entre jours ouvrés et jours ouvrables pour les congés ?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Les jours ouvrables sont tous les jours de la semaine sauf le dimanche et les jours fériés chômés, soit généralement 6 jours par semaine (lundi au samedi). Les jours ouvrés excluent en plus le samedi, soit 5 jours par semaine. Le Code du travail fixe le droit légal à 30 jours ouvrables (= 25 jours ouvrés). Les deux méthodes sont légales à condition que la méthode des jours ouvrés ne soit pas moins favorable au salarié."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Comment fonctionne le fractionnement des congés payés ?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "L'article L3141-19 du Code du travail prévoit des jours de congés supplémentaires lorsque le congé principal (la partie prise entre le 1er mai et le 31 octobre) est fractionné. Si le salarié prend au moins 6 jours ouvrables hors période légale, il bénéficie de 2 jours supplémentaires. Entre 3 et 5 jours hors période, il bénéficie de 1 jour supplémentaire. Le salarié peut renoncer à ces jours par accord écrit."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Quand les congés payés sont-ils acquis : période civile ou légale ?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "La période de référence légale court du 1er juin de l'année N au 31 mai de l'année N+1. Les droits acquis sur cette période sont pris entre le 1er mai et le 31 octobre de l'année N+1. Toutefois, un accord d'entreprise peut retenir la période civile (1er janvier au 31 décembre), sous réserve qu'elle ne soit pas moins favorable au salarié."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Un salarié à temps partiel a-t-il les mêmes droits à congés ?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Oui. Conformément à l'article L3121-1 du Code du travail, un salarié à temps partiel bénéficie des mêmes droits à congés payés qu'un salarié à temps plein : 30 jours ouvrables (25 jours ouvrés) pour une année complète. La réduction ne porte pas sur le nombre de jours acquis mais sur la rémunération perçue pendant ces congés, calculée selon la règle du dixième ou du maintien de salaire."
+        }
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", sans-serif; background: #fff; color: #0f172a; line-height: 1.7; }
+    a { color: #0ea5e9; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .grad { background: linear-gradient(160deg, #0f172a 0%, #1e3a8a 60%, #0ea5e9 100%); }
+
+    /* NAV */
+    nav { padding: 0 24px; height: 60px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+    .logo { font-size: 22px; font-weight: 800; color: white; letter-spacing: -0.04em; text-decoration: none; }
+    .logo span { color: #38bdf8; }
+    .nav-links { display: flex; gap: 20px; align-items: center; }
+    .nav-link { color: rgba(255,255,255,0.75); font-size: 13px; font-weight: 500; text-decoration: none; }
+    .nav-link:hover { color: white; text-decoration: none; }
+    .nav-link.active { color: white; font-weight: 700; }
+    .nav-cta { background: #0ea5e9; border: none; color: white; border-radius: 8px; padding: 8px 18px; font-size: 13px; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-block; }
+    .nav-login { color: rgba(255,255,255,0.85); font-size: 13px; font-weight: 600; text-decoration: none; padding: 8px 14px; border: 1px solid rgba(255,255,255,0.25); border-radius: 8px; }
+    .nav-login:hover { background: rgba(255,255,255,0.1); color: white; }
+    .nav-cta:hover { background: #0284c7; text-decoration: none; }
+
+    /* HERO */
+    .hero { padding: 72px 24px 64px; text-align: center;; max-width: none; margin: 0; }
+    .hero-badge { display: inline-block; background: rgba(14,165,233,0.18); border: 1px solid rgba(56,189,248,0.35); border-radius: 20px; color: #7dd3fc; font-size: 12px; font-weight: 700; padding: 5px 14px; margin-bottom: 24px; text-transform: uppercase; letter-spacing: 0.06em; }
+    h1 { font-size: 38px; font-weight: 800; color: white; letter-spacing: -0.04em; max-width: 720px; margin: 0 auto 20px; line-height: 1.18; }
+    .hero-sub { font-size: 16px; color: rgba(255,255,255,0.72); max-width: 560px; margin: 0 auto 32px; line-height: 1.65; }
+    .hero-meta { font-size: 12px; color: rgba(255,255,255,0.4); }
+
+    /* SOMMAIRE */
+    .toc-wrap { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 14px; padding: 28px 32px; max-width: 760px; margin: 0 auto 0; }
+    .toc-wrap h2 { font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 14px; letter-spacing: 0; }
+    .toc-list { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px; }
+    .toc-list li { font-size: 13px; }
+    .toc-list a { color: #0ea5e9; font-weight: 500; }
+
+    /* LAYOUT */
+    .content-wrap { max-width: 860px; margin: 0 auto; padding: 0 24px; }
+    .section-white { background: #fff; padding: 64px 24px; }
+    .section-gray  { background: #f8fafc; padding: 64px 24px; }
+
+    /* TYPOGRAPHY */
+    h2.section-title { font-size: 26px; font-weight: 800; color: #0f172a; letter-spacing: -0.03em; margin-bottom: 8px; }
+    .section-intro { font-size: 15px; color: #475569; margin-bottom: 28px; max-width: 700px; }
+    h3.subsection { font-size: 18px; font-weight: 700; color: #0f172a; margin: 32px 0 10px; letter-spacing: -0.02em; }
+    p { font-size: 14px; color: #334155; line-height: 1.75; margin-bottom: 14px; }
+    p:last-child { margin-bottom: 0; }
+    strong { color: #0f172a; }
+    .law { font-weight: 700; color: #1e3a8a; }
+
+    /* CALLOUT */
+    .callout { border-left: 4px solid #0ea5e9; background: #f0f9ff; border-radius: 0 10px 10px 0; padding: 16px 20px; margin: 24px 0; }
+    .callout.green { border-color: #22c55e; background: #f0fdf4; }
+    .callout.amber { border-color: #f59e0b; background: #fffbeb; }
+    .callout p { font-size: 13px; color: #0c4a6e; }
+    .callout.green p { color: #14532d; }
+    .callout.amber p { color: #78350f; }
+    .callout-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #0ea5e9; margin-bottom: 6px; }
+    .callout.green .callout-title { color: #16a34a; }
+    .callout.amber .callout-title { color: #d97706; }
+
+    /* TABLE */
+    .table-wrap { overflow-x: auto; margin: 28px 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead th { background: #0f172a; color: white; font-weight: 700; padding: 12px 16px; text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+    tbody td { padding: 12px 16px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top; }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:nth-child(even) { background: #f8fafc; }
+    td.highlight { font-weight: 700; color: #0f172a; }
+    td.good { color: #16a34a; font-weight: 600; }
+    td.neutral { color: #64748b; }
+
+    /* FERIES */
+    .feries-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin: 24px 0; }
+    .ferie-item { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; gap: 10px; }
+    .ferie-icon { font-size: 20px; flex-shrink: 0; }
+    .ferie-name { font-size: 13px; font-weight: 600; color: #0f172a; }
+    .ferie-date { font-size: 11px; color: #64748b; margin-top: 1px; }
+
+    /* FAQ */
+    .faq-list { margin: 16px 0; }
+    .faq-item { border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 10px; overflow: hidden; }
+    .faq-question { width: 100%; background: none; border: none; padding: 18px 20px; text-align: left; font-size: 14px; font-weight: 700; color: #0f172a; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 16px; line-height: 1.4; }
+    .faq-question:hover { background: #f8fafc; }
+    .faq-arrow { color: #0ea5e9; font-size: 18px; flex-shrink: 0; transition: transform 0.2s; }
+    .faq-item.open .faq-arrow { transform: rotate(45deg); }
+    .faq-answer { display: none; padding: 0 20px 18px; font-size: 13px; color: #475569; line-height: 1.75; border-top: 1px solid #f1f5f9; }
+    .faq-answer p { margin-top: 14px; color: #475569; }
+    .faq-item.open .faq-answer { display: block; }
+
+    /* EXEMPLE BOX */
+    .example-box { background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border: 1px solid #bae6fd; border-radius: 14px; padding: 24px 28px; margin: 24px 0; }
+    .example-box h4 { font-size: 13px; font-weight: 700; color: #0369a1; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 14px; }
+    .example-box p { font-size: 13px; color: #0c4a6e; }
+    .example-box .step { display: flex; gap: 10px; margin-bottom: 8px; align-items: baseline; }
+    .example-box .step-num { background: #0ea5e9; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .example-box .step-text { font-size: 13px; color: #0c4a6e; line-height: 1.6; }
+
+    /* CTA */
+    .cta-section { background: linear-gradient(135deg, #0f172a, #1d4ed8); border-radius: 20px; padding: 60px 40px; text-align: center; margin: 0 24px; }
+    .cta-section h2 { font-size: 26px; font-weight: 800; color: white; margin-bottom: 12px; letter-spacing: -0.03em; }
+    .cta-section p { color: rgba(255,255,255,0.7); font-size: 15px; margin-bottom: 28px; }
+    .btn-primary { background: #0ea5e9; border: none; color: white; border-radius: 10px; padding: 14px 28px; font-size: 15px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 16px rgba(14,165,233,0.4); text-decoration: none; display: inline-block; }
+    .btn-primary:hover { background: #0284c7; text-decoration: none; }
+    .cta-features { display: flex; justify-content: center; gap: 24px; flex-wrap: wrap; margin-top: 20px; }
+    .cta-feat { font-size: 12px; color: rgba(255,255,255,0.55); }
+    .cta-feat::before { content: "✓ "; color: #34d399; font-weight: 700; }
+
+    /* FOOTER */
+    footer { background: #0f172a; padding: 32px 24px; text-align: center; margin-top: 80px; }
+    .footer-logo { font-size: 18px; font-weight: 800; color: white; letter-spacing: -0.03em; }
+    .footer-logo span { color: #38bdf8; }
+    footer p { font-size: 12px; color: rgba(255,255,255,0.35); margin-top: 8px; }
+    footer a { color: rgba(255,255,255,0.45); font-size: 11px; text-decoration: underline; margin: 0 8px; }
+    footer a:hover { color: rgba(255,255,255,0.7); }
+
+    /* RESPONSIVE */
+    @media (max-width: 700px) {
+      h1 { font-size: 26px; }
+      h2.section-title { font-size: 21px; }
+      .toc-list { grid-template-columns: 1fr; }
+      .feries-grid { grid-template-columns: 1fr 1fr; }
+      .cta-section { padding: 40px 20px; margin: 0; border-radius: 0; }
+    }
+
+    @media (max-width: 640px) {
+      .nav-link { display: none; }
+      .nav-links { gap: 8px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="grad">
+    <a href="/" class="logo">Leav<span>up</span></a>
+    <div class="nav-links">
+      <a href="/fonctionnalites" class="nav-link">Fonctionnalités</a>
+      <a href="/tarifs" class="nav-link">Tarifs</a>
+      <a href="/comparatif" class="nav-link">Comparatif</a>
+      <a href="/vs-excel" class="nav-link">vs Excel</a>
+      <a href="/guide-conges-payes" class="nav-link">Guide légal</a>
+      <a href="/" class="nav-login">Se connecter</a>
+      <a href="/" class="nav-cta">Essai gratuit</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero grad">
+    <div class="hero-badge">Guide juridique 2026 — mis à jour</div>
+    <h1>Tout ce que vous devez savoir sur les congés payés en France</h1>
+    <p class="hero-sub">Bases légales, calcul des droits, jours ouvrés vs ouvrables, fractionnement, jours fériés, cas particuliers — le guide de référence pour employeurs et salariés.</p>
+    <p class="hero-meta">Mis à jour en mars 2026 · Conforme au Code du travail en vigueur</p>
+  </section>
+
+  <!-- SOMMAIRE -->
+  <div class="section-white" style="padding-top: 48px; padding-bottom: 48px;">
+    <div class="content-wrap">
+      <div class="toc-wrap">
+        <h2>Sommaire du guide</h2>
+        <ol class="toc-list">
+          <li><a href="#bases-legales">Les bases légales</a></li>
+          <li><a href="#jours-ouvres">Jours ouvrés vs jours ouvrables</a></li>
+          <li><a href="#jours-feries">Les 11 jours fériés nationaux</a></li>
+          <li><a href="#fractionnement">Le fractionnement des congés</a></li>
+          <li><a href="#periode-reference">La période de référence</a></li>
+          <li><a href="#cas-particuliers">Cas particuliers</a></li>
+          <li><a href="#faq">Questions fréquentes</a></li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1. BASES LÉGALES -->
+  <div class="section-gray" id="bases-legales">
+    <div class="content-wrap">
+      <h2 class="section-title">1. Les bases légales des congés payés</h2>
+      <p class="section-intro">Le droit aux congés payés est un droit fondamental garanti par le Code du travail français. Voici les règles essentielles que tout employeur et salarié doit connaître.</p>
+
+      <h3 class="subsection">Le droit minimal légal</h3>
+      <p>Conformément à <span class="law">l'article L3141-3 du Code du travail</span>, tout salarié lié par un contrat de travail a droit à un congé payé à la charge de l'employeur, à raison de <strong>2,5 jours ouvrables par mois de travail effectif</strong> chez le même employeur. La durée totale du congé exigible ne peut excéder <strong>30 jours ouvrables</strong> (soit 25 jours ouvrés) par an.</p>
+      <p>Ce droit s'applique dès le premier jour de travail. Depuis la loi du 22 avril 2024, la période d'essai et les congés de maladie ouvrent également droit à acquisition, ce qui renforce la protection des salariés.</p>
+
+      <div class="callout green">
+        <div class="callout-title">Principe clé</div>
+        <p><strong>Aucune condition d'ancienneté</strong> n'est requise pour bénéficier des congés payés. Un salarié en période d'essai acquiert déjà des droits dès son premier jour de travail.</p>
+      </div>
+
+      <h3 class="subsection">Qu'est-ce que le travail effectif ?</h3>
+      <p>Sont assimilées à du travail effectif pour le calcul des congés (<span class="law">art. L3141-5 C. trav.</span>) : les périodes de congés payés de l'année précédente, les congés de maternité, paternité, adoption et parental d'éducation, les périodes de suspension pour accident du travail ou maladie professionnelle (dans la limite d'un an), les congés de formation, les congés exceptionnels pour événements familiaux, et depuis 2024, les arrêts maladie ordinaires.</p>
+      <p>En revanche, l'absence injustifiée, le congé parental à temps plein ou la mise à pied conservatoire <strong>ne sont pas</strong> assimilés à du travail effectif et réduisent les droits acquis proportionnellement.</p>
+
+      <h3 class="subsection">La règle du dixième et le maintien de salaire</h3>
+      <p>La rémunération pendant le congé est calculée selon la méthode la plus favorable au salarié entre deux règles (<span class="law">art. L3141-24 C. trav.</span>) :</p>
+      <ul style="list-style: none; margin: 16px 0;">
+        <li style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 14px; color: #334155;">
+          <strong>Règle du dixième :</strong> 1/10e de la rémunération brute totale perçue au cours de la période de référence (incluant les primes, les heures supplémentaires, etc.).
+        </li>
+        <li style="padding: 8px 0; font-size: 14px; color: #334155;">
+          <strong>Règle du maintien de salaire :</strong> le salarié perçoit la même rémunération que s'il avait continué à travailler pendant ses congés.
+        </li>
+      </ul>
+      <p>L'employeur doit appliquer automatiquement la règle la plus avantageuse. En pratique, la règle du maintien est souvent plus favorable pour les salariés dont la rémunération est stable.</p>
+
+      <div class="callout amber">
+        <div class="callout-title">Attention employeurs</div>
+        <p>Le fait de ne pas accorder les congés légaux à un salarié constitue une faute grave de l'employeur, susceptible d'engager sa responsabilité civile et de donner lieu à des dommages et intérêts. Les congés payés non pris en raison d'une maladie doivent être reportés (<span class="law">CJUE, 20 janv. 2009</span>).</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. JOURS OUVRES VS OUVRABLES -->
+  <div class="section-white" id="jours-ouvres">
+    <div class="content-wrap">
+      <h2 class="section-title">2. Jours ouvrés vs jours ouvrables</h2>
+      <p class="section-intro">C'est l'une des sources de confusion les plus fréquentes. Voici une explication claire et un tableau comparatif pour ne plus confondre les deux systèmes.</p>
+
+      <h3 class="subsection">Définitions</h3>
+      <p><strong>Les jours ouvrables</strong> sont tous les jours de la semaine à l'exception du dimanche et des jours fériés légaux chômés. En pratique, cela correspond généralement à <strong>6 jours par semaine</strong> (du lundi au samedi inclus). Le Code du travail retient cette base par défaut.</p>
+      <p><strong>Les jours ouvrés</strong> correspondent aux jours habituellement travaillés dans l'entreprise. Pour la quasi-totalité des entreprises fonctionnant du lundi au vendredi, cela représente <strong>5 jours par semaine</strong>. Le samedi n'est donc pas comptabilisé.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Critère</th>
+              <th>Jours ouvrables</th>
+              <th>Jours ouvrés</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="highlight">Base légale</td>
+              <td><span class="law">Art. L3141-3 C. trav.</span> — référence légale par défaut</td>
+              <td>Admis par usage et accords d'entreprise</td>
+            </tr>
+            <tr>
+              <td class="highlight">Jours de la semaine comptés</td>
+              <td>Lundi → Samedi (6 j/semaine)</td>
+              <td>Lundi → Vendredi (5 j/semaine)</td>
+            </tr>
+            <tr>
+              <td class="highlight">Le samedi est-il compté ?</td>
+              <td class="neutral">Oui, sauf s'il est férié et chômé</td>
+              <td class="good">Non</td>
+            </tr>
+            <tr>
+              <td class="highlight">Droit annuel légal</td>
+              <td><strong>30 jours ouvrables / an</strong></td>
+              <td><strong>25 jours ouvrés / an</strong></td>
+            </tr>
+            <tr>
+              <td class="highlight">Acquisition mensuelle</td>
+              <td>2,5 jours ouvrables / mois</td>
+              <td>≈ 2,08 jours ouvrés / mois</td>
+            </tr>
+            <tr>
+              <td class="highlight">Équivalence</td>
+              <td colspan="2" style="text-align: center; color: #0f172a; font-weight: 600;">30 jours ouvrables = 25 jours ouvrés = 5 semaines de congés</td>
+            </tr>
+            <tr>
+              <td class="highlight">Exemple concret : 2 semaines de congés</td>
+              <td>12 jours ouvrables décomptés</td>
+              <td>10 jours ouvrés décomptés</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout">
+        <div class="callout-title">Règle de non-régression</div>
+        <p>Un accord d'entreprise peut adopter le décompte en jours ouvrés <strong>uniquement si le salarié n'y est pas perdant</strong>. Si un salarié travaille 4 jours par semaine, le décompte en jours ouvrés doit être recalculé en conséquence pour ne pas lui être défavorable. En cas de doute, c'est le mode de calcul le plus favorable au salarié qui s'impose.</p>
+      </div>
+
+      <h3 class="subsection">Quel système choisir pour votre entreprise ?</h3>
+      <p>Pour les entreprises dont les salariés travaillent du lundi au vendredi, les deux systèmes sont mathématiquement équivalents (5 semaines = 30 j ouvrables = 25 j ouvrés). Le décompte en <strong>jours ouvrés est souvent plus simple</strong> à comprendre pour les salariés car il correspond directement aux jours travaillés.</p>
+      <p>En revanche, si votre entreprise emploie des salariés travaillant le samedi (commerce, hôtellerie, restauration), le décompte en jours ouvrables est généralement plus adapté pour garantir l'équité.</p>
+    </div>
+  </div>
+
+  <!-- 3. JOURS FÉRIÉS -->
+  <div class="section-gray" id="jours-feries">
+    <div class="content-wrap">
+      <h2 class="section-title">3. Les 11 jours fériés nationaux</h2>
+      <p class="section-intro">La France compte 11 jours fériés légaux par an, fixés par <span class="law">l'article L3133-1 du Code du travail</span>. Leur impact sur les congés payés dépend de leur positionnement dans la période de congé et du système de décompte retenu.</p>
+
+      <div class="feries-grid">
+        <div class="ferie-item">
+          <div class="ferie-icon">🎉</div>
+          <div>
+            <div class="ferie-name">1er janvier</div>
+            <div class="ferie-date">Jour de l'An — date fixe</div>
+          </div>
+        </div>
+        <div class="ferie-item">
+          <div class="ferie-icon">✝️</div>
+          <div>
+            <div class="ferie-name">Lundi de Pâques</div>
+            <div class="ferie-date">Date mobile — voir calcul</div>
+          </div>
+        </div>
+        <div class="ferie-item">
+          <div class="ferie-icon">✊</div>
+          <div>
+            <div class="ferie-name">1er mai</div>
+            <div class="ferie-date">Fête du Travail — date fixe</div>
+          </div>
+        </div>
+        <div class="ferie-item">
+          <div class="ferie-icon">🇫🇷</div>
+          <div>
+            <div class="ferie-name">8 mai</div>
+            <div class="ferie-date">Victoire 1945 — date fixe</div>
+          </div>
+        </div>
+        <div class="ferie-item">
+          <div class="ferie-icon">✝️</div>
+          <div>
+            <div class="ferie-name">Ascension</div>
+            <div class="ferie-date">J+39 après Pâques — mobile</div>
+          </div>
+        </div>
+        <div class="ferie-item">
+          <div class="ferie-icon">✝️</div>
+          <div>
+            <div class="ferie-name">Lundi de Pentecôte</div>
+            <div class="ferie-date">J+50 après Pâques — mobile</div>
+          </div>
+        </div>
+        <div class="ferie-item">
+          <div class="ferie-icon">🇫🇷</div>
+          <div>
+            <div class="ferie-name">14 juillet</div>
+            <div class="ferie-date">Fête Nationale — date fixe</div>
+          </div>
+        </div>
+        <div class="ferie-item">
+          <div class="ferie-icon">✝️</div>
+          <div>
+            <div class="ferie-name">15 août</div>
+            <div class="ferie-date">Assomption — date fixe</div>
+          </div>
+        </div>
+        <div class="ferie-item">
+          <div class="ferie-icon">🕯️</div>
+          <div>
+            <div class="ferie-name">1er novembre</div>
+            <div class="ferie-date">Toussaint — date fixe</div>
+          </div>
+        </div>
+        <div class="ferie-item">
+          <div class="ferie-icon">🕊️</div>
+          <div>
+            <div class="ferie-name">11 novembre</div>
+            <div class="ferie-date">Armistice 1918 — date fixe</div>
+          </div>
+        </div>
+        <div class="ferie-item">
+          <div class="ferie-icon">🎄</div>
+          <div>
+            <div class="ferie-name">25 décembre</div>
+            <div class="ferie-date">Noël — date fixe</div>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="subsection">Le calcul de Pâques (la date mobile)</h3>
+      <p>Trois jours fériés dépendent de la date de Pâques : le lundi de Pâques, l'Ascension (39 jours après Pâques) et le lundi de Pentecôte (50 jours après Pâques). La date de Pâques est calculée selon l'algorithme dit <strong>de Butcher-Meeus</strong>, basé sur le cycle luni-solaire de 19 ans (cycle de Méton). Elle tombe toujours entre le 22 mars et le 25 avril.</p>
+      <p>Dates de Pâques à venir pour référence : <strong>5 avril 2026</strong>, 25 avril 2027, 16 avril 2028, 1er avril 2029. Un logiciel de gestion des congés comme Leavup recalcule automatiquement ces dates chaque année pour éviter toute erreur.</p>
+
+      <h3 class="subsection">Impact des jours fériés sur les congés</h3>
+      <p>Un jour férié tombant <strong>pendant une période de congé ne se décompte pas</strong> comme un jour de congé payé. Par exemple, si un salarié pose du 13 au 17 juillet (5 jours), le 14 juillet n'est pas décompté. Il ne consomme donc que 4 jours ouvrés (ou 4 jours ouvrables si le samedi n'est pas travaillé).</p>
+      <p>En revanche, si le jour férié tombe un samedi ou un dimanche (jour normalement non travaillé), il n'ouvre pas droit à un jour de récupération, sauf accord d'entreprise plus favorable.</p>
+
+      <div class="callout amber">
+        <div class="callout-title">Exception : le 1er mai</div>
+        <p><span class="law">L'article L3133-4 C. trav.</span> confère au 1er mai un statut particulier : c'est le seul jour férié dont le chômage est <strong>obligatoire</strong> pour tous les salariés (sauf secteurs spécifiques). Le travail le 1er mai donne droit au paiement double.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. FRACTIONNEMENT -->
+  <div class="section-white" id="fractionnement">
+    <div class="content-wrap">
+      <h2 class="section-title">4. Le fractionnement des congés payés</h2>
+      <p class="section-intro">Le fractionnement est un mécanisme légal souvent méconnu qui permet aux salariés de bénéficier de jours de congés supplémentaires lorsqu'ils ne prennent pas l'intégralité de leurs congés en été.</p>
+
+      <h3 class="subsection">Le principe légal</h3>
+      <p>Selon <span class="law">l'article L3141-19 du Code du travail</span>, lorsque le congé principal (la fraction d'au moins 12 jours ouvrables consécutifs, pouvant aller jusqu'à 24 jours ouvrables) est fractionné à l'initiative de l'employeur, le salarié bénéficie de jours de congés supplémentaires dits <strong>jours de fractionnement</strong>.</p>
+      <p>Ces jours supplémentaires sont attribués en fonction du nombre de jours de congé pris en dehors de la <strong>période légale du 1er mai au 31 octobre</strong> :</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Jours pris hors période légale (nov. → avr.)</th>
+              <th>Jours supplémentaires accordés</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Moins de 3 jours ouvrables</td>
+              <td class="neutral">Aucun jour supplémentaire</td>
+            </tr>
+            <tr>
+              <td>De 3 à 5 jours ouvrables</td>
+              <td class="good"><strong>+ 1 jour</strong> de congé supplémentaire</td>
+            </tr>
+            <tr>
+              <td>6 jours ouvrables ou plus</td>
+              <td class="good"><strong>+ 2 jours</strong> de congé supplémentaire</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="example-box">
+        <h4>Exemple chiffré — salarié en jours ouvrables</h4>
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-text">Droit total : <strong>30 jours ouvrables</strong>. Le salarié pose 12 jours en juillet (période légale).</div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-text">Il lui reste 18 jours. Il en pose 12 entre mai et octobre : il reste <strong>6 jours à poser hors période légale</strong> (novembre à avril).</div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-text">6 jours hors période = seuil des 6 jours atteint → <strong>+2 jours de fractionnement</strong>.</div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-text">Solde final : 6 jours restants + 2 jours de fractionnement = <strong>8 jours à poser</strong> avant la fin de la période de référence.</div>
+        </div>
+      </div>
+
+      <h3 class="subsection">La renonciation au fractionnement</h3>
+      <p>Le salarié peut renoncer aux jours de fractionnement, mais <strong>uniquement par un accord individuel exprès</strong>, donné après que le fractionnement a été décidé. Une clause de renonciation préalable insérée dans le contrat de travail ou le règlement intérieur est <strong>nulle et non avenue</strong>.</p>
+      <p>Un accord collectif (convention collective, accord d'entreprise) peut également exclure le bénéfice des jours de fractionnement, ce qui est fréquent dans certaines branches professionnelles.</p>
+
+      <div class="callout">
+        <div class="callout-title">Bon à savoir</div>
+        <p>Le fractionnement ne s'applique qu'aux <strong>5e semaine de congés</strong> si elle est prise séparément du congé principal — elle ne génère pas de droits à fractionnement supplémentaires. Seuls les 24 premiers jours ouvrables (le congé principal) sont concernés.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. PÉRIODE DE RÉFÉRENCE -->
+  <div class="section-gray" id="periode-reference">
+    <div class="content-wrap">
+      <h2 class="section-title">5. La période de référence</h2>
+      <p class="section-intro">La période de référence détermine sur quelle plage temporelle les droits à congés sont calculés. Il existe deux régimes principaux : la période légale et la période civile.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Critère</th>
+              <th>Période légale (défaut)</th>
+              <th>Période civile (accord)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="highlight">Début</td>
+              <td><strong>1er juin</strong> de l'année N</td>
+              <td><strong>1er janvier</strong> de l'année N</td>
+            </tr>
+            <tr>
+              <td class="highlight">Fin</td>
+              <td><strong>31 mai</strong> de l'année N+1</td>
+              <td><strong>31 décembre</strong> de l'année N</td>
+            </tr>
+            <tr>
+              <td class="highlight">Droits acquis pris</td>
+              <td>Du 1er mai au 31 octobre N+1 (période légale de prise)</td>
+              <td>L'année N+1, selon accord</td>
+            </tr>
+            <tr>
+              <td class="highlight">Base légale</td>
+              <td><span class="law">Art. L3141-10 C. trav.</span></td>
+              <td>Accord d'entreprise ou de branche</td>
+            </tr>
+            <tr>
+              <td class="highlight">Avantage</td>
+              <td>Garantie légale maximale</td>
+              <td>Alignement sur l'année civile, plus simple comptablement</td>
+            </tr>
+            <tr>
+              <td class="highlight">Condition</td>
+              <td>S'applique par défaut sans accord</td>
+              <td>Accord collectif obligatoire, non moins favorable</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="subsection">La période de prise des congés</h3>
+      <p>Avec la période de référence légale, les congés acquis du 1er juin N au 31 mai N+1 doivent être pris entre le <strong>1er mai et le 31 octobre N+1</strong> pour ce qui est du congé principal. La 5e semaine peut être prise à tout moment de l'année, indépendamment de la période légale.</p>
+      <p>À l'expiration de la période de prise, les congés non pris sont en principe <strong>perdus</strong>, sauf :</p>
+      <ul style="list-style: none; margin: 12px 0;">
+        <li style="padding: 7px 0; border-bottom: 1px solid #e2e8f0; font-size: 14px; color: #334155;">Si l'employeur a empêché le salarié de prendre ses congés (par ex. surcroît d'activité, absence de réponse aux demandes).</li>
+        <li style="padding: 7px 0; border-bottom: 1px solid #e2e8f0; font-size: 14px; color: #334155;">Si le salarié était en arrêt maladie ou maternité pendant la période de prise (les congés doivent alors être reportés — <span class="law">CJUE, Schultz-Hoff, 20 janv. 2009</span> et loi 2024).</li>
+        <li style="padding: 7px 0; font-size: 14px; color: #334155;">Si un accord d'entreprise prévoit un compte épargne-temps (CET) permettant de cumuler des droits.</li>
+      </ul>
+
+      <div class="callout green">
+        <div class="callout-title">Évolution 2024</div>
+        <p>La loi du 22 avril 2024, transposant la directive européenne, a renforcé le report des congés payés en cas de maladie. Désormais, un salarié en arrêt maladie acquiert des congés et peut les reporter pendant <strong>15 mois</strong> à compter de la fin de son arrêt. L'employeur doit l'informer de ses droits dans le mois suivant son retour.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. CAS PARTICULIERS -->
+  <div class="section-white" id="cas-particuliers">
+    <div class="content-wrap">
+      <h2 class="section-title">6. Cas particuliers</h2>
+      <p class="section-intro">La réglementation prévoit des adaptations pour certaines situations courantes en entreprise. Voici les règles applicables aux configurations les plus fréquentes.</p>
+
+      <h3 class="subsection">Le temps partiel</h3>
+      <p>Conformément au principe d'égalité de traitement (<span class="law">art. L3123-1 C. trav.</span>), un salarié à temps partiel bénéficie <strong>du même nombre de jours de congés</strong> qu'un salarié à temps plein : 30 jours ouvrables (25 jours ouvrés) pour une année complète.</p>
+      <p>Toutefois, la <strong>rémunération</strong> pendant les congés est calculée proportionnellement au temps de travail. La règle du dixième s'applique sur la base des rémunérations effectivement perçues. Un salarié à mi-temps percevra donc approximativement la moitié de ce qu'il percevrait s'il était à temps plein.</p>
+      <p>Point important : pour le <strong>décompte des jours pris</strong>, un salarié à 4/5e qui pose une semaine entière consomme 5 jours ouvrés comme un temps plein, même s'il ne travaille normalement que 4 jours. En jours ouvrables, le calcul est identique. Certains accords d'entreprise prévoient des règles spécifiques plus favorables.</p>
+
+      <h3 class="subsection">L'arrivée en cours d'année (prorata)</h3>
+      <p>Un salarié arrivant en cours de période de référence acquiert ses droits <strong>au prorata de son temps de présence</strong>. Le calcul est simple : 2,5 jours ouvrables par mois complet travaillé.</p>
+
+      <div class="example-box">
+        <h4>Exemple — arrivée en cours de période légale</h4>
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-text">Salarié embauché le <strong>1er septembre N</strong> (période de référence : 1er juin N → 31 mai N+1).</div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-text">Il travaille de septembre à mai = <strong>9 mois complets</strong>.</div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-text">Droits acquis : 9 × 2,5 = <strong>22,5 jours ouvrables</strong>, arrondis à 23 jours (toujours en faveur du salarié).</div>
+        </div>
+      </div>
+
+      <h3 class="subsection">Les demi-journées</h3>
+      <p>Le Code du travail n'impose pas de règle spécifique sur les demi-journées de congé. En pratique, <span class="law">l'article D3141-5 C. trav.</span> prévoit que lorsque le nombre de jours ouvrables calculé n'est pas un nombre entier, la durée du congé est portée au nombre entier immédiatement supérieur.</p>
+      <p>En ce qui concerne la prise en demi-journées, c'est l'<strong>accord d'entreprise ou, à défaut, l'usage</strong> qui fixe les modalités. En l'absence de texte, l'employeur peut autoriser les demi-journées à titre de bonne gestion, sans que cela soit un droit exprès du salarié. Les demi-journées prises décomptent alors 0,5 jour sur le solde.</p>
+
+      <h3 class="subsection">Les travailleurs saisonniers et CDD</h3>
+      <p>Tout salarié en CDD, intérimaire ou saisonnier acquiert des droits à congés selon les mêmes règles. À la fin du contrat, s'il n'a pas pu prendre ses congés, il perçoit une <strong>indemnité compensatrice de congés payés</strong> égale à 10 % de la rémunération brute totale, conformément à <span class="law">l'article L3141-28 C. trav.</span> Cette indemnité est soumise à cotisations sociales.</p>
+
+      <div class="callout">
+        <div class="callout-title">Bon à savoir — congés conventionnels</div>
+        <p>De nombreuses conventions collectives prévoient des jours de congés supplémentaires au-delà du minimum légal : congés d'ancienneté, congés pour événements familiaux renforcés, jours pour enfant malade, etc. Ces droits conventionnels s'ajoutent aux 30 jours ouvrables légaux et ne peuvent pas être remplacés par les droits légaux.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. FAQ -->
+  <div class="section-gray" id="faq">
+    <div class="content-wrap">
+      <h2 class="section-title">7. Questions fréquentes sur les congés payés</h2>
+      <p class="section-intro">Retrouvez les réponses aux questions les plus posées par les employeurs et les salariés sur les congés payés en France.</p>
+
+      <div class="faq-list">
+
+        <div class="faq-item open">
+          <button class="faq-question" onclick="toggleFaq(this)">
+            Combien de jours de congés un salarié acquiert-il par mois ?
+            <span class="faq-arrow">+</span>
+          </button>
+          <div class="faq-answer">
+            <p>Conformément à <span class="law">l'article L3141-3 du Code du travail</span>, tout salarié acquiert <strong>2,5 jours ouvrables de congés payés par mois de travail effectif</strong>, soit 30 jours ouvrables (25 jours ouvrés) pour une année complète de présence. Ce droit est ouvert sans condition d'ancienneté, dès le premier jour de travail.</p>
+            <p>En cas d'absence partielle sur le mois (ex : arrivée le 15 du mois), seuls les mois complets de travail effectif sont comptabilisés. Un mois incomplet ne génère généralement aucun droit, sauf dispositions conventionnelles contraires.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)">
+            Quelle est la différence entre jours ouvrés et jours ouvrables ?
+            <span class="faq-arrow">+</span>
+          </button>
+          <div class="faq-answer">
+            <p>Les <strong>jours ouvrables</strong> comprennent tous les jours de la semaine sauf le dimanche et les jours fériés chômés, soit généralement 6 jours (lundi → samedi). Les <strong>jours ouvrés</strong> sont les jours habituellement travaillés dans l'entreprise, soit généralement 5 jours (lundi → vendredi) pour les entreprises en semaine classique.</p>
+            <p>Le Code du travail utilise les jours ouvrables comme référence légale : <strong>30 jours ouvrables = 25 jours ouvrés = 5 semaines de congés</strong>. Les deux méthodes sont légales à condition que la méthode des jours ouvrés ne soit pas moins favorable au salarié que la méthode légale.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)">
+            Comment fonctionne le fractionnement des congés payés ?
+            <span class="faq-arrow">+</span>
+          </button>
+          <div class="faq-answer">
+            <p><span class="law">L'article L3141-19 du Code du travail</span> prévoit des jours supplémentaires lorsque le congé principal est fractionné. Si le salarié pose <strong>6 jours ou plus</strong> en dehors de la période légale (1er mai → 31 octobre), il obtient <strong>2 jours de congé supplémentaires</strong>. Entre <strong>3 et 5 jours</strong> hors période, il obtient <strong>1 jour supplémentaire</strong>.</p>
+            <p>Ces jours de fractionnement ne sont pas dus si c'est le salarié lui-même qui demande le fractionnement et renonce expressément à ces droits. Une renonciation anticipée dans le contrat de travail est en revanche nulle.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)">
+            Que se passe-t-il si un salarié tombe malade pendant ses congés ?
+            <span class="faq-arrow">+</span>
+          </button>
+          <div class="faq-answer">
+            <p>Depuis un arrêt de la Cour de cassation du 13 septembre 2023 aligné sur la jurisprudence européenne, et la loi du 22 avril 2024 qui l'a consacré dans le Code du travail, un salarié tombant malade pendant ses congés payés peut <strong>reporter les jours non pris</strong> en raison de la maladie.</p>
+            <p>Le salarié doit informer l'employeur de son état de santé. Les jours coïncidant avec la maladie sont alors considérés comme non pris et sont reportés. L'employeur dispose d'un <strong>délai de 15 mois</strong> pour permettre au salarié de prendre ces jours reportés, à compter de la fin de l'arrêt de travail.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)">
+            Un salarié à temps partiel a-t-il les mêmes droits à congés payés ?
+            <span class="faq-arrow">+</span>
+          </button>
+          <div class="faq-answer">
+            <p>Oui, un salarié à temps partiel acquiert le <strong>même nombre de jours de congés</strong> qu'un salarié à temps plein : 30 jours ouvrables (25 jours ouvrés) par an. La réduction liée au temps partiel ne porte pas sur le nombre de jours mais sur la <strong>rémunération perçue</strong> pendant ces congés, calculée selon la règle du dixième ou du maintien de salaire.</p>
+            <p>Attention toutefois au décompte : si un salarié à 4/5e pose une semaine entière de congés, il consomme 5 jours ouvrés (ou 6 jours ouvrables selon le système retenu), exactement comme un temps plein, même s'il n'aurait travaillé que 4 jours cette semaine-là.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div class="section-white" style="padding-top: 80px; padding-bottom: 80px;">
+    <div class="cta-section">
+      <h2>Leavup calcule tout ça automatiquement</h2>
+      <p>Jours ouvrés ou ouvrables, fractionnement, jours fériés mobiles, prorata, demi-journées — Leavup applique les règles du Code du travail pour vous, sans aucune configuration complexe.</p>
+      <a href="/" class="btn-primary">Essai gratuit →</a>
+      <div class="cta-features">
+        <span class="cta-feat">Gratuit jusqu'à 10 salariés</span>
+        <span class="cta-feat">Aucune carte bancaire</span>
+        <span class="cta-feat">Conforme au droit français</span>
+        <span class="cta-feat">Hébergé en France</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-logo">Leav<span>up</span></div>
+    <p style="margin-top:10px;display:flex;flex-wrap:wrap;justify-content:center;gap:6px 20px;">
+      <a href="/">Accueil</a>
+      <a href="/fonctionnalites">Fonctionnalités</a>
+      <a href="/tarifs">Tarifs</a>
+      <a href="/comparatif">Comparatif</a>
+      <a href="/vs-excel">vs Excel</a>
+      <a href="/guide-conges-payes">Guide légal</a>
+      <a href="/mentions-legales">Mentions légales</a>
+      <a href="/privacy">Confidentialité</a>
+    </p>
+    <p>© 2026 Leavup — Logiciel de gestion des congés pour PME françaises</p>
+  </footer>
+
+  <script>
+    function toggleFaq(btn) {
+      const item = btn.closest('.faq-item');
+      item.classList.toggle('open');
+    }
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fonctionnalités — Leavup, logiciel de gestion des congés et absences</title>
+  <meta name="description" content="Découvrez toutes les fonctionnalités de Leavup : demandes de congés en ligne, validation en un clic, planning d'équipe, RTT, fractionnement légal, export CSV, notifications email. Conforme au droit français." />
+  <link rel="canonical" href="https://leavup.com/fonctionnalites" />
+  <meta name="robots" content="index, follow" />
+  <meta property="og:type"        content="website" />
+  <meta property="og:url"         content="https://leavup.com/fonctionnalites" />
+  <meta property="og:title"       content="Fonctionnalités Leavup — Gestion des congés complète pour PME" />
+  <meta property="og:description" content="Tout ce dont vous avez besoin pour gérer les absences de votre équipe : congés payés, RTT, sans solde, planning visuel, notifications automatiques." />
+  <meta property="og:image"       content="https://leavup.com/og-image.png" />
+  <meta property="og:locale"      content="fr_FR" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Accueil", "item": "https://leavup.com/" },
+      { "@type": "ListItem", "position": 2, "name": "Fonctionnalités", "item": "https://leavup.com/fonctionnalites" }
+    ]
+  }
+  </script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #fff; color: #0f172a; line-height: 1.6; }
+    a { color: #0ea5e9; text-decoration: none; }
+    .grad { background: linear-gradient(160deg, #0f172a 0%, #1e3a8a 60%, #0ea5e9 100%); }
+    nav { padding: 0 24px; height: 60px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+    .logo { font-size: 22px; font-weight: 800; color: white; letter-spacing: -0.04em; }
+    .logo span { color: #38bdf8; }
+    .nav-links { display: flex; gap: 20px; align-items: center; }
+    .nav-link { color: rgba(255,255,255,0.75); font-size: 13px; font-weight: 500; }
+    .nav-cta { background: #0ea5e9; border: none; color: white; border-radius: 8px; padding: 8px 18px; font-size: 13px; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-block; }
+    .nav-login { color: rgba(255,255,255,0.85); font-size: 13px; font-weight: 600; text-decoration: none; padding: 8px 14px; border: 1px solid rgba(255,255,255,0.25); border-radius: 8px; }
+    .nav-login:hover { background: rgba(255,255,255,0.1); color: white; }
+    .hero { padding: 64px 24px 56px; text-align: center; max-width: none; margin: 0; }
+    .hero-badge { display: inline-block; background: rgba(14,165,233,0.18); border: 1px solid rgba(56,189,248,0.35); border-radius: 20px; color: #7dd3fc; font-size: 12px; font-weight: 700; padding: 5px 14px; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 0.05em; }
+    h1 { font-size: 36px; font-weight: 800; color: white; letter-spacing: -0.04em; max-width: 640px; margin: 0 auto 16px; line-height: 1.2; }
+    .hero-sub { font-size: 16px; color: rgba(255,255,255,0.72); max-width: 500px; margin: 0 auto; }
+    section { padding: 64px 24px; max-width: 980px; margin: 0 auto; }
+    h2 { font-size: 24px; font-weight: 800; color: #0f172a; margin-bottom: 12px; letter-spacing: -0.03em; }
+    .section-sub { font-size: 14px; color: #64748b; margin-bottom: 40px; }
+    .feature-block { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: start; margin-bottom: 72px; }
+    .feature-block.reverse { direction: rtl; }
+    .feature-block.reverse > * { direction: ltr; }
+    .feature-visual { background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border-radius: 16px; padding: 36px; border: 1px solid #bae6fd; min-height: 220px; display: flex; align-items: center; justify-content: center; }
+    .feature-visual .icon { font-size: 72px; }
+    .feature-content h3 { font-size: 20px; font-weight: 800; color: #0f172a; margin-bottom: 12px; letter-spacing: -0.02em; }
+    .feature-content p { font-size: 14px; color: #475569; margin-bottom: 16px; line-height: 1.7; }
+    .feature-list { list-style: none; }
+    .feature-list li { font-size: 13px; color: #334155; padding: 6px 0; border-bottom: 1px solid #f1f5f9; display: flex; align-items: flex-start; gap: 8px; }
+    .feature-list li:last-child { border-bottom: none; }
+    .check { color: #22c55e; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+    .legal-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 20px 24px; margin-top: 16px; }
+    .legal-box h4 { font-size: 13px; font-weight: 700; color: #15803d; margin-bottom: 8px; }
+    .legal-box p { font-size: 12px; color: #166534; line-height: 1.6; }
+    .stats { background: #f8fafc; border-radius: 20px; padding: 40px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; text-align: center; margin: 48px 0; }
+    .stat-val { font-size: 36px; font-weight: 800; color: #0f172a; letter-spacing: -0.04em; }
+    .stat-label { font-size: 13px; color: #64748b; margin-top: 4px; }
+    .cta-section { background: linear-gradient(135deg, #0f172a, #1d4ed8); border-radius: 20px; padding: 56px 40px; text-align: center; margin: 48px 0; }
+    .cta-section h2 { color: white; margin-bottom: 12px; }
+    .cta-section p { color: rgba(255,255,255,0.7); font-size: 15px; margin-bottom: 28px; }
+    .btn-primary { background: #0ea5e9; border: none; color: white; border-radius: 10px; padding: 14px 28px; font-size: 15px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 16px rgba(14,165,233,0.4); text-decoration: none; display: inline-block; }
+    footer { background: #0f172a; padding: 28px 24px; text-align: center; }
+    .footer-logo { font-size: 18px; font-weight: 800; color: white; letter-spacing: -0.03em; }
+    .footer-logo span { color: #38bdf8; }
+    footer p { font-size: 12px; color: rgba(255,255,255,0.35); margin-top: 8px; }
+    footer a { color: rgba(255,255,255,0.45); font-size: 11px; text-decoration: underline; margin: 0 8px; }
+    @media (max-width: 700px) {
+      h1 { font-size: 26px; }
+      .feature-block { grid-template-columns: 1fr; }
+      .feature-block.reverse { direction: ltr; }
+      .stats { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 640px) {
+      .nav-link { display: none; }
+      .nav-links { gap: 8px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="grad">
+    <a href="/" class="logo">Leav<span>up</span></a>
+    <div class="nav-links">
+      <a href="/fonctionnalites" class="nav-link">Fonctionnalités</a>
+      <a href="/tarifs" class="nav-link">Tarifs</a>
+      <a href="/comparatif" class="nav-link">Comparatif</a>
+      <a href="/vs-excel" class="nav-link">vs Excel</a>
+      <a href="/guide-conges-payes" class="nav-link">Guide légal</a>
+      <a href="/" class="nav-login">Se connecter</a>
+      <a href="/" class="nav-cta">Essai gratuit</a>
+    </div>
+  </nav>
+
+  <section class="hero grad">
+    <div class="hero-badge">100 % conforme au droit du travail français</div>
+    <h1>Tout ce qu'il faut pour gérer les absences de votre équipe</h1>
+    <p class="hero-sub">De la demande de congé à la validation, en passant par le planning et les soldes — Leavup gère tout automatiquement.</p>
+  </section>
+
+  <section>
+
+    <!-- Stats -->
+    <div class="stats">
+      <div>
+        <div class="stat-val">2 min</div>
+        <div class="stat-label">pour créer votre organisation et inviter vos salariés</div>
+      </div>
+      <div>
+        <div class="stat-val">0 €</div>
+        <div class="stat-label">pour les équipes jusqu'à 10 utilisateurs</div>
+      </div>
+      <div>
+        <div class="stat-val">100 %</div>
+        <div class="stat-label">hébergé et développé en France, conforme RGPD</div>
+      </div>
+    </div>
+
+    <!-- Demandes -->
+    <div class="feature-block">
+      <div class="feature-visual"><div class="icon">📅</div></div>
+      <div class="feature-content">
+        <h3>Demandes de congés en ligne</h3>
+        <p>Vos salariés posent leurs demandes depuis n'importe quel appareil, sans application à installer. Congés payés, RTT, sans solde ou demi-journée — tout est pris en charge.</p>
+        <ul class="feature-list">
+          <li><span class="check">✓</span> Congés payés (CP), RTT, congés sans solde</li>
+          <li><span class="check">✓</span> Demi-journées (matin ou après-midi)</li>
+          <li><span class="check">✓</span> Commentaire libre pour chaque demande</li>
+          <li><span class="check">✓</span> Solde disponible affiché en temps réel</li>
+          <li><span class="check">✓</span> Accès depuis mobile, tablette, desktop</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Validation -->
+    <div class="feature-block reverse">
+      <div class="feature-visual"><div class="icon">✅</div></div>
+      <div class="feature-content">
+        <h3>Validation rapide pour les managers</h3>
+        <p>L'administrateur ou le chef d'équipe reçoit une notification email à chaque nouvelle demande. Approbation ou refus en un clic, avec motif optionnel pour les refus.</p>
+        <ul class="feature-list">
+          <li><span class="check">✓</span> Notification email instantanée</li>
+          <li><span class="check">✓</span> Approbation ou refus en un clic</li>
+          <li><span class="check">✓</span> Motif de refus envoyé au salarié</li>
+          <li><span class="check">✓</span> Alerte si plusieurs salariés absents simultanément</li>
+          <li><span class="check">✓</span> Historique complet de toutes les décisions</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Planning -->
+    <div class="feature-block">
+      <div class="feature-visual"><div class="icon">📊</div></div>
+      <div class="feature-content">
+        <h3>Planning visuel de l'équipe</h3>
+        <p>Visualisez toutes les absences passées, en cours et à venir sur un calendrier partagé. Anticipez les périodes de sous-effectif et organisez votre équipe sereinement.</p>
+        <ul class="feature-list">
+          <li><span class="check">✓</span> Vue calendrier mensuelle</li>
+          <li><span class="check">✓</span> Demandes en attente et approuvées visibles</li>
+          <li><span class="check">✓</span> Filtrage par équipe ou par salarié</li>
+          <li><span class="check">✓</span> Export CSV des absences</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Calculs légaux -->
+    <div class="feature-block reverse">
+      <div class="feature-visual"><div class="icon">⚖️</div></div>
+      <div class="feature-content">
+        <h3>Calculs légaux automatiques</h3>
+        <p>Leavup applique automatiquement les règles du Code du travail français. Vous n'avez pas besoin de connaître la loi — le logiciel s'en charge.</p>
+        <ul class="feature-list">
+          <li><span class="check">✓</span> Jours ouvrés (25j/an) ou ouvrables (30j/an)</li>
+          <li><span class="check">✓</span> Acquisition progressive ou par anticipation</li>
+          <li><span class="check">✓</span> 11 jours fériés nationaux (avec Pâques mobile)</li>
+          <li><span class="check">✓</span> Fractionnement automatique (Art. L3141-19)</li>
+          <li><span class="check">✓</span> Alerte pour congé principal > 24 jours ouvrables</li>
+          <li><span class="check">✓</span> Période de référence civile ou légale (1er juin)</li>
+        </ul>
+        <div class="legal-box">
+          <h4>Conforme au Code du travail</h4>
+          <p>Les calculs de Leavup sont basés sur les articles L3141-1 à L3141-32 du Code du travail. Acquisition, fractionnement, période de référence — tout est géré automatiquement selon la loi française.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Équipes -->
+    <div class="feature-block">
+      <div class="feature-visual"><div class="icon">👥</div></div>
+      <div class="feature-content">
+        <h3>Gestion d'équipes et délégation</h3>
+        <p>Déléguez la validation des congés à des chefs d'équipe sans leur donner accès aux paramètres sensibles de l'organisation.</p>
+        <ul class="feature-list">
+          <li><span class="check">✓</span> Création d'équipes illimitées</li>
+          <li><span class="check">✓</span> Rôle chef d'équipe avec droits limités</li>
+          <li><span class="check">✓</span> Vue planning propre à chaque équipe</li>
+          <li><span class="check">✓</span> Notifications séparées par équipe</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Notifications -->
+    <div class="feature-block reverse">
+      <div class="feature-visual"><div class="icon">🔔</div></div>
+      <div class="feature-content">
+        <h3>Notifications email automatiques</h3>
+        <p>Chaque étape du processus déclenche une notification email automatique. Fini les oublis et les relances manuelles.</p>
+        <ul class="feature-list">
+          <li><span class="check">✓</span> Email au salarié à la soumission</li>
+          <li><span class="check">✓</span> Email à l'admin à chaque nouvelle demande</li>
+          <li><span class="check">✓</span> Email au salarié lors de l'approbation ou du refus</li>
+          <li><span class="check">✓</span> Notifications configurables par l'administrateur</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- RGPD -->
+    <div class="feature-block">
+      <div class="feature-visual"><div class="icon">🔒</div></div>
+      <div class="feature-content">
+        <h3>Sécurité et conformité RGPD</h3>
+        <p>Leavup est hébergé et développé en France. Toutes les données personnelles sont chiffrées en base de données. Les salariés peuvent exporter et supprimer leurs données à tout moment.</p>
+        <ul class="feature-list">
+          <li><span class="check">✓</span> Hébergement 100 % France</li>
+          <li><span class="check">✓</span> Chiffrement AES-256 des données personnelles</li>
+          <li><span class="check">✓</span> Export RGPD disponible pour chaque salarié</li>
+          <li><span class="check">✓</span> Suppression de compte sur demande</li>
+          <li><span class="check">✓</span> Aucune donnée transmise à des tiers</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- CTA -->
+    <div class="cta-section">
+      <h2>Prêt à simplifier la gestion des congés de votre équipe ?</h2>
+      <p>Créez votre organisation en 2 minutes. Gratuit jusqu'à 10 utilisateurs, sans carte bancaire.</p>
+      <a href="/" class="btn-primary">Démarrer gratuitement →</a>
+    </div>
+
+  </section>
+
+  <footer>
+    <div class="footer-logo">Leav<span>up</span></div>
+    <p style="margin-top:10px;display:flex;flex-wrap:wrap;justify-content:center;gap:6px 20px;">
+      <a href="/">Accueil</a>
+      <a href="/fonctionnalites">Fonctionnalités</a>
+      <a href="/tarifs">Tarifs</a>
+      <a href="/comparatif">Comparatif</a>
+      <a href="/vs-excel">vs Excel</a>
+      <a href="/guide-conges-payes">Guide légal</a>
+      <a href="/mentions-legales">Mentions légales</a>
+      <a href="/privacy">Confidentialité</a>
+    </p>
+    <p>© 2026 Leavup — Logiciel de gestion des congés pour PME françaises</p>
+  </footer>
+
+</body>
+</html>

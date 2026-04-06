@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Leavup — Logiciel de gestion des congés et absences pour PME</title>
+  <meta name="description" content="Leavup simplifie la gestion des congés payés, RTT et absences pour les PME françaises. Demandes en ligne, validation en un clic, planning visuel. Gratuit jusqu'à 10 utilisateurs. Hébergé en France, conforme RGPD." />
+  <meta name="keywords" content="gestion des congés, logiciel congés payés, gestion absences PME, suivi congés salariés, RTT, demande congé en ligne, planning absences, RGPD" />
+  <link rel="canonical" href="https://leavup.com/" />
+  <meta name="robots" content="index, follow" />
+  <meta property="og:type"        content="website" />
+  <meta property="og:url"         content="https://leavup.com/" />
+  <meta property="og:title"       content="Leavup — Gestion des congés simplifiée pour votre équipe" />
+  <meta property="og:description" content="Planifiez, validez et suivez les congés de vos employés — sans paperasse, sans Excel. Gratuit jusqu'à 10 utilisateurs." />
+  <meta property="og:image"        content="https://leavup.com/og-image.png" />
+  <meta property="og:image:width"  content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:locale"       content="fr_FR" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Leavup",
+    "url": "https://leavup.com",
+    "description": "Logiciel de gestion des congés payés, RTT et absences pour PME françaises.",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web",
+    "offers": [
+      { "@type": "Offer", "name": "Plan Gratuit", "price": "0", "priceCurrency": "EUR" },
+      { "@type": "Offer", "name": "Plan Pro" }
+    ],
+    "publisher": { "@type": "Organization", "name": "Leavup", "url": "https://leavup.com", "address": { "@type": "PostalAddress", "addressCountry": "FR" } }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      { "@type": "Question", "name": "Leavup est-il gratuit ?", "acceptedAnswer": { "@type": "Answer", "text": "Oui, Leavup est gratuit pour 1 administrateur et jusqu'à 9 employés. Le plan Pro est disponible sur devis pour les équipes plus importantes." } },
+      { "@type": "Question", "name": "Les données sont-elles hébergées en France ?", "acceptedAnswer": { "@type": "Answer", "text": "Oui, Leavup est hébergé et développé en France. Toutes les données personnelles sont chiffrées et le service est conforme au RGPD." } },
+      { "@type": "Question", "name": "Comment fonctionne la gestion des congés avec Leavup ?", "acceptedAnswer": { "@type": "Answer", "text": "Les salariés soumettent leurs demandes en ligne, l'administrateur valide ou refuse en un clic, et le salarié est notifié automatiquement par email." } },
+      { "@type": "Question", "name": "Leavup gère-t-il les RTT ?", "acceptedAnswer": { "@type": "Answer", "text": "Oui, Leavup gère les congés payés, les RTT et les congés sans solde, avec calcul automatique des soldes selon les règles légales françaises." } }
+    ]
+  }
+  </script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #fff; color: #0f172a; line-height: 1.6; }
+    a { color: #0ea5e9; text-decoration: none; }
+    .grad { background: linear-gradient(160deg, #0f172a 0%, #1e3a8a 60%, #0ea5e9 100%); }
+
+    /* Navbar */
+    nav { padding: 0 24px; height: 60px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+    .logo { font-size: 22px; font-weight: 800; color: white; letter-spacing: -0.04em; }
+    .logo span { color: #38bdf8; }
+    .nav-cta { background: #0ea5e9; border: none; color: white; border-radius: 8px; padding: 8px 18px; font-size: 13px; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-block; }
+
+    /* Hero */
+    .hero { padding: 72px 24px 80px; text-align: center; }
+    .hero-badge { display: inline-block; background: rgba(14,165,233,0.18); border: 1px solid rgba(56,189,248,0.35); border-radius: 20px; color: #7dd3fc; font-size: 12px; font-weight: 700; padding: 5px 14px; margin-bottom: 24px; letter-spacing: 0.05em; text-transform: uppercase; }
+    h1 { font-size: 42px; font-weight: 800; color: white; letter-spacing: -0.04em; max-width: 620px; margin: 0 auto 18px; line-height: 1.15; }
+    .hero-sub { font-size: 17px; color: rgba(255,255,255,0.72); max-width: 480px; margin: 0 auto 36px; }
+    .btn-primary { background: #0ea5e9; border: none; color: white; border-radius: 10px; padding: 14px 28px; font-size: 15px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 16px rgba(14,165,233,0.4); text-decoration: none; display: inline-block; }
+    .btn-ghost { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25); color: white; border-radius: 10px; padding: 14px 28px; font-size: 15px; font-weight: 600; text-decoration: none; display: inline-block; margin-left: 12px; }
+    .ctas { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+    /* Trust bar */
+    .trust { display: flex; gap: 28px; justify-content: center; flex-wrap: wrap; margin-top: 36px; }
+    .trust-item { display: flex; align-items: center; gap: 7px; color: rgba(255,255,255,0.75); font-size: 13px; font-weight: 500; }
+
+    /* Features */
+    .features { padding: 64px 24px; max-width: 960px; margin: 0 auto; }
+    .features h2, .pricing h2 { text-align: center; font-size: 26px; font-weight: 800; color: #0f172a; margin-bottom: 48px; letter-spacing: -0.03em; }
+    .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 24px; }
+    .feature-card { background: #f8fafc; border-radius: 16px; padding: 28px 24px; border: 1px solid #e2e8f0; }
+    .feature-icon { font-size: 32px; margin-bottom: 12px; }
+    .feature-title { font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 8px; }
+    .feature-desc { font-size: 13px; color: #64748b; }
+
+    /* Pricing */
+    .pricing { background: #f8fafc; padding: 64px 24px; }
+    .pricing-grid { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; max-width: 700px; margin: 0 auto; }
+    .plan { background: white; border-radius: 20px; padding: 36px 32px; border: 2px solid #e2e8f0; flex: 1 1 260px; max-width: 320px; }
+    .plan-pro { background: linear-gradient(135deg,#0f172a,#1d4ed8); border: none; position: relative; }
+    .plan-name { font-size: 13px; font-weight: 700; color: #64748b; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .plan-pro .plan-name { color: rgba(255,255,255,0.6); }
+    .plan-price { font-size: 40px; font-weight: 800; color: #0f172a; margin-bottom: 4px; }
+    .plan-pro .plan-price { color: white; }
+    .plan-period { font-size: 12px; color: #94a3b8; margin-bottom: 24px; }
+    .plan-pro .plan-period { color: rgba(255,255,255,0.4); }
+    .plan-feature { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #334155; margin-bottom: 10px; }
+    .plan-pro .plan-feature { color: rgba(255,255,255,0.85); }
+    .check { color: #22c55e; font-weight: 700; }
+    .plan-pro .check { color: #38bdf8; }
+    .popular-badge { position: absolute; top: 16px; right: 16px; background: #0ea5e9; border-radius: 20px; padding: 3px 12px; font-size: 11px; font-weight: 700; color: white; }
+    .plan-btn { width: 100%; margin-top: 24px; background: #0f172a; border: none; color: white; border-radius: 10px; padding: 12px; font-size: 14px; cursor: pointer; font-weight: 700; text-align: center; display: block; text-decoration: none; }
+    .plan-btn-blue { background: #0ea5e9; }
+
+    /* FAQ */
+    .faq { padding: 64px 24px; max-width: 720px; margin: 0 auto; }
+    .faq h2 { text-align: center; font-size: 26px; font-weight: 800; color: #0f172a; margin-bottom: 40px; letter-spacing: -0.03em; }
+    .faq-item { border-bottom: 1px solid #e2e8f0; padding: 20px 0; }
+    .faq-q { font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 10px; }
+    .faq-a { font-size: 14px; color: #475569; }
+
+    /* Footer */
+    footer { background: #0f172a; padding: 28px 24px; text-align: center; }
+    .footer-logo { font-size: 18px; font-weight: 800; color: white; letter-spacing: -0.03em; }
+    .footer-logo span { color: #38bdf8; }
+    footer p { font-size: 12px; color: rgba(255,255,255,0.35); margin-top: 8px; }
+    footer a { color: rgba(255,255,255,0.45); font-size: 11px; text-decoration: underline; }
+
+    @media (max-width: 600px) {
+      h1 { font-size: 28px; }
+      .btn-ghost { margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="grad">
+    <span class="logo">Leav<span>up</span></span>
+    <div>
+      <a href="/" class="nav-cta">Essai gratuit</a>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero grad">
+    <div class="hero-badge">Gratuit jusqu'à 10 utilisateurs</div>
+    <h1>La gestion des absences simplifiée pour votre équipe</h1>
+    <p class="hero-sub">Planifiez, validez et suivez les congés de vos employés — sans paperasse, sans tableur Excel.</p>
+    <div class="ctas">
+      <a href="/" class="btn-primary">Commencer gratuitement →</a>
+      <a href="/" class="btn-ghost">Se connecter</a>
+    </div>
+    <div class="trust">
+      <span class="trust-item">🇫🇷 Hébergé en France</span>
+      <span class="trust-item">🇫🇷 Développé en France</span>
+      <span class="trust-item">🔒 Données personnelles chiffrées</span>
+      <span class="trust-item">🛡️ Conforme RGPD</span>
+    </div>
+  </section>
+
+  <!-- Fonctionnalités -->
+  <section class="features">
+    <h2>Tout ce dont vous avez besoin</h2>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">📅</div>
+        <div class="feature-title">Demandes en ligne</div>
+        <p class="feature-desc">Vos salariés posent leurs absences depuis n'importe où, en quelques clics.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">✅</div>
+        <div class="feature-title">Validation rapide</div>
+        <p class="feature-desc">Approuvez ou refusez en un clic. Notifications email automatiques.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <div class="feature-title">Planning visuel</div>
+        <p class="feature-desc">Visualisez toutes les absences de votre équipe sur un calendrier partagé.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">👥</div>
+        <div class="feature-title">Gestion d'équipes</div>
+        <p class="feature-desc">Déléguez la validation des congés payés et RTT à des chefs d'équipe.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📋</div>
+        <div class="feature-title">Congés payés &amp; RTT</div>
+        <p class="feature-desc">Gestion automatique des soldes CP, RTT et congés sans solde selon le droit français.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔔</div>
+        <div class="feature-title">Notifications email</div>
+        <p class="feature-desc">Alertes automatiques à chaque étape : soumission, validation, refus.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tarifs -->
+  <section class="pricing">
+    <h2>Des tarifs simples et transparents</h2>
+    <p style="text-align:center;font-size:14px;color:#64748b;margin-top:-32px;margin-bottom:40px;">Pas de coût par utilisateur — un forfait fixe selon la taille de votre équipe.</p>
+    <div class="pricing-grid" style="max-width:860px;flex-wrap:wrap;justify-content:center;">
+      <div class="plan" style="flex:1 1 220px;max-width:260px;padding:28px 24px;">
+        <div class="plan-name">Starter</div>
+        <div style="font-size:13px;font-weight:600;color:#0ea5e9;margin-bottom:10px;">jusqu'à 10 utilisateurs</div>
+        <div class="plan-price" style="font-size:32px;">0 €</div>
+        <div class="plan-period">gratuit pour toujours</div>
+        <div class="plan-feature"><span class="check">✓</span> Demandes &amp; validation</div>
+        <div class="plan-feature"><span class="check">✓</span> Planning visuel</div>
+        <div class="plan-feature"><span class="check">✓</span> Notifications email</div>
+        <a href="/" class="plan-btn">Démarrer gratuitement</a>
+      </div>
+      <div class="plan plan-pro" style="flex:1 1 220px;max-width:260px;padding:28px 24px;">
+        <span class="popular-badge">Populaire</span>
+        <div class="plan-name">Teams</div>
+        <div style="font-size:13px;font-weight:600;color:#7dd3fc;margin-bottom:10px;">jusqu'à 30 utilisateurs</div>
+        <div class="plan-price" style="font-size:32px;">39 €</div>
+        <div class="plan-period">/mois HT</div>
+        <div class="plan-feature"><span class="check">✓</span> Tout Starter</div>
+        <div class="plan-feature"><span class="check">✓</span> Équipes &amp; délégation</div>
+        <div class="plan-feature"><span class="check">✓</span> Historique illimité</div>
+        <div class="plan-feature"><span class="check">✓</span> Export CSV</div>
+        <div class="plan-feature"><span class="check">✓</span> Support email</div>
+        <a href="mailto:contact@leavup.com?subject=Leavup Teams" class="plan-btn plan-btn-blue">Contactez-nous</a>
+      </div>
+      <div class="plan plan-pro" style="flex:1 1 220px;max-width:260px;padding:28px 24px;background:#0f172a;">
+        <div class="plan-name">Enterprise</div>
+        <div style="font-size:13px;font-weight:600;color:#7dd3fc;margin-bottom:10px;">30+ utilisateurs</div>
+        <div class="plan-price" style="font-size:22px;">Sur devis</div>
+        <div class="plan-period">contactez-nous</div>
+        <div class="plan-feature"><span class="check">✓</span> Tout Teams</div>
+        <div class="plan-feature"><span class="check">✓</span> Intégration SIRH</div>
+        <div class="plan-feature"><span class="check">✓</span> SSO / SAML</div>
+        <div class="plan-feature"><span class="check">✓</span> Hébergement dédié</div>
+        <div class="plan-feature"><span class="check">✓</span> Contrat sur-mesure</div>
+        <a href="mailto:contact@leavup.com?subject=Leavup Enterprise" class="plan-btn plan-btn-blue">Contactez-nous</a>
+      </div>
+    </div>
+    <p style="text-align:center;font-size:12px;color:#94a3b8;margin-top:28px;">-20% sur le plan Teams avec la facturation annuelle (31 €/mois)</p>
+  </section>
+
+  <!-- FAQ -->
+  <section class="faq">
+    <h2>Questions fréquentes</h2>
+    <div class="faq-item">
+      <div class="faq-q">Leavup est-il vraiment gratuit ?</div>
+      <p class="faq-a">Oui, le plan gratuit est sans limite de durée. Il permet à 1 administrateur et 9 employés (10 utilisateurs au total) d'utiliser toutes les fonctionnalités de la plateforme. Pour les équipes plus grandes, le plan Pro est disponible sur devis.</p>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Les données sont-elles sécurisées et hébergées en France ?</div>
+      <p class="faq-a">Oui. Leavup est hébergé et développé en France. Toutes les données personnelles (noms, emails, adresses) sont chiffrées en base de données. Le service est conforme au Règlement Général sur la Protection des Données (RGPD).</p>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Comment fonctionne la gestion des congés payés ?</div>
+      <p class="faq-a">Le salarié soumet sa demande d'absence en ligne (congés payés, RTT, sans solde, demi-journée). L'administrateur ou le chef d'équipe reçoit une notification email et valide ou refuse en un clic. Le salarié est notifié automatiquement et le solde de congés est mis à jour.</p>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Leavup gère-t-il les RTT et les congés sans solde ?</div>
+      <p class="faq-a">Oui, Leavup gère les congés payés (CP), les RTT et les congés sans solde. Les soldes sont calculés automatiquement selon les règles du Code du travail français (2,5 jours ouvrables de CP par mois travaillé).</p>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Puis-je déléguer la validation des congés à un chef d'équipe ?</div>
+      <p class="faq-a">Oui, la fonctionnalité "Équipes" permet à l'administrateur de désigner des chefs d'équipe parmi les employés. Ces derniers peuvent approuver ou refuser les demandes de congés de leur équipe.</p>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-logo">Leav<span>up</span></div>
+    <p>© 2026 Leavup — Logiciel de gestion des congés pour PME françaises</p>
+    <p style="margin-top:6px"><a href="/privacy">Politique de confidentialité</a></p>
+  </footer>
+
+</body>
+</html>

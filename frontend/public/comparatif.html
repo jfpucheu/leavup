@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Comparatif logiciels congés 2026 — Leavup vs Lucca, Factorial, PayFit</title>
+  <meta name="description" content="Comparez Leavup avec Lucca, Factorial, PayFit et Eurécia. Fonctionnalités, prix, conformité droit français. Calculez vos économies avec notre simulateur." />
+  <link rel="canonical" href="https://leavup.com/comparatif" />
+  <meta name="robots" content="index, follow" />
+  <meta property="og:type"        content="website" />
+  <meta property="og:url"         content="https://leavup.com/comparatif" />
+  <meta property="og:title"       content="Comparatif logiciels congés 2026 — Leavup vs concurrents" />
+  <meta property="og:description" content="Comparatif complet : Leavup vs Lucca, Factorial, PayFit. Prix, fonctionnalités, conformité droit français. Calculez vos économies." />
+  <meta property="og:image"       content="https://leavup.com/og-image.png" />
+  <meta property="og:locale"      content="fr_FR" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Accueil", "item": "https://leavup.com/" },
+      { "@type": "ListItem", "position": 2, "name": "Comparatif", "item": "https://leavup.com/comparatif" }
+    ]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Quelle est la différence entre Leavup et Lucca ?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Lucca est une suite RH complète à partir de 7 €/utilisateur/mois, adaptée aux moyennes et grandes entreprises. Leavup est un logiciel spécialisé en gestion des congés, gratuit jusqu'à 10 utilisateurs et à 39 €/mois ensuite, idéal pour les PME françaises qui n'ont pas besoin d'une suite RH complète."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Leavup est-il conforme à la législation française ?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Oui. Leavup gère les jours ouvrés (25j, lun-ven) et ouvrables (30j, lun-sam), les 11 jours fériés légaux, le fractionnement (art. L3141-19), et les alertes sur les 24 jours consécutifs maximum (art. L3141-17) conformément au Code du travail français."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Peut-on migrer depuis Factorial ou PayFit vers Leavup ?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "La migration est simple : les employés sont importés via un formulaire d'invitation, les soldes initiaux sont saisis manuellement. Leavup ne récupère pas automatiquement l'historique mais le démarrage prend moins d'une heure pour une équipe de 10 personnes."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Quel logiciel est le moins cher pour une PME de 20 personnes ?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Pour 20 personnes : Leavup Teams 39 €/mois, Factorial environ 180 €/mois, Lucca Timmi Absences environ 140 €/mois, PayFit dépend du module (souvent 200 €+ avec la paie). Leavup est le plus économique pour une gestion des congés pure."
+        }
+      }
+    ]
+  }
+  </script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+      background: #fff;
+      color: #0f172a;
+      line-height: 1.6;
+    }
+    a { color: #0ea5e9; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* NAV */
+    .grad { background: linear-gradient(160deg, #0f172a 0%, #1e3a8a 60%, #0ea5e9 100%); }
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 1.5rem; height: 60px;
+    }
+    .logo { font-size: 1.25rem; font-weight: 800; color: #fff; text-decoration: none; }
+    .logo span { color: #38bdf8; }
+    .nav-links { display: flex; gap: 1.25rem; font-size: 0.85rem; align-items: center; }
+    .nav-link { color: rgba(255,255,255,0.75); font-weight: 500; text-decoration: none; }
+    .nav-link:hover { color: #fff; }
+    .nav-cta {
+      background: #0ea5e9; color: #fff !important; padding: 0.45rem 1rem;
+      border-radius: 8px; font-weight: 700; font-size: 0.85rem; text-decoration: none;
+    }
+    .nav-login { color: rgba(255,255,255,0.85); font-size: 13px; font-weight: 600; text-decoration: none; padding: 8px 14px; border: 1px solid rgba(255,255,255,0.25); border-radius: 8px; }
+    .nav-login:hover { background: rgba(255,255,255,0.1); color: white; }
+
+    /* HERO */
+    .hero {
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 60%, #0ea5e9 100%);
+      text-align: center;
+      padding: 4rem 1.5rem 3rem;
+    }
+    .badge {
+      display: inline-block;
+      background: rgba(56,189,248,0.15);
+      color: #38bdf8;
+      border: 1px solid rgba(56,189,248,0.3);
+      padding: 0.3rem 0.9rem;
+      border-radius: 99px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 1.2rem;
+      letter-spacing: 0.05em;
+    }
+    .hero h1 { font-size: clamp(1.8rem, 4vw, 2.8rem); font-weight: 800; color: #fff; margin-bottom: 1rem; }
+    .hero h1 em { color: #38bdf8; font-style: normal; }
+    .hero p { font-size: 1.05rem; color: #94a3b8; max-width: 600px; margin: 0 auto 2rem; }
+    .hero-cta {
+      display: inline-block;
+      background: linear-gradient(135deg, #1d4ed8, #0ea5e9);
+      color: #fff; font-weight: 700; font-size: 1rem;
+      padding: 0.8rem 2rem; border-radius: 8px;
+    }
+
+    /* SECTIONS */
+    section { padding: 3.5rem 1.5rem; max-width: 1100px; margin: 0 auto; }
+    h2 { font-size: 1.6rem; font-weight: 800; color: #0f172a; margin-bottom: 0.5rem; }
+    .subtitle { color: #94a3b8; margin-bottom: 2rem; font-size: 0.95rem; }
+
+    /* COMPARISON TABLE */
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; min-width: 700px; }
+    thead th {
+      background: #f8fafc;
+      color: #64748b;
+      font-weight: 600;
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid #e2e8f0;
+      white-space: nowrap;
+    }
+    thead th.highlight {
+      background: rgba(29,78,216,0.3);
+      color: #38bdf8;
+    }
+    tbody tr { border-bottom: 1px solid #f1f5f9; }
+    tbody tr:hover { background: #f8fafc; }
+    tbody td {
+      padding: 0.7rem 1rem;
+      color: #475569;
+      vertical-align: middle;
+    }
+    tbody td.highlight {
+      background: rgba(29,78,216,0.06);
+      color: #1d4ed8;
+      font-weight: 600;
+    }
+    td.feature { color: #0f172a; font-weight: 500; }
+
+    .check { color: #4ade80; font-size: 1.1rem; }
+    .cross { color: #f87171; font-size: 1.1rem; }
+    .partial { color: #fbbf24; font-size: 0.85rem; }
+
+    /* PRICE CARDS */
+    .price-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2.5rem;
+    }
+    .price-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+    }
+    .price-card.featured {
+      border-color: #1d4ed8;
+      background: rgba(29,78,216,0.1);
+    }
+    .price-card .tool-name { font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .price-card .price { font-size: 1.8rem; font-weight: 800; color: #0f172a; }
+    .price-card .price span { font-size: 0.85rem; font-weight: 400; color: #64748b; }
+    .price-card .basis { font-size: 0.78rem; color: #64748b; margin-top: 0.3rem; }
+    .price-card .note { font-size: 0.8rem; color: #94a3b8; margin-top: 0.75rem; }
+    .featured .price { color: #38bdf8; }
+
+    /* CALCULATOR */
+    .calculator {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 2rem;
+    }
+    .calc-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .calc-field label {
+      display: block;
+      font-size: 0.85rem;
+      color: #94a3b8;
+      margin-bottom: 0.4rem;
+    }
+    .calc-field input, .calc-field select {
+      width: 100%;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      color: #0f172a;
+      padding: 0.6rem 0.8rem;
+      font-size: 0.95rem;
+    }
+    .calc-field input:focus, .calc-field select:focus {
+      outline: none;
+      border-color: #38bdf8;
+    }
+    .calc-result {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+    .result-card {
+      background: #f1f5f9;
+      border-radius: 10px;
+      padding: 1rem;
+      text-align: center;
+    }
+    .result-card.savings {
+      background: rgba(29,78,216,0.15);
+      border: 1px solid rgba(29,78,216,0.3);
+    }
+    .result-card .label { font-size: 0.78rem; color: #94a3b8; margin-bottom: 0.3rem; }
+    .result-card .value { font-size: 1.5rem; font-weight: 800; color: #0f172a; }
+    .result-card.savings .value { color: #4ade80; }
+    .result-card .period { font-size: 0.75rem; color: #64748b; margin-top: 0.2rem; }
+
+    /* FAQ */
+    .faq-list { display: flex; flex-direction: column; gap: 0.75rem; }
+    .faq-item {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .faq-q {
+      width: 100%; background: none; border: none;
+      color: #0f172a; font-size: 0.95rem; font-weight: 600;
+      padding: 1rem 1.25rem;
+      display: flex; justify-content: space-between; align-items: center;
+      cursor: pointer; text-align: left; gap: 1rem;
+    }
+    .faq-q:hover { color: #1d4ed8; }
+    .faq-icon { color: #38bdf8; font-size: 1.1rem; flex-shrink: 0; transition: transform 0.2s; }
+    .faq-a { display: none; padding: 0 1.25rem 1rem; color: #94a3b8; font-size: 0.9rem; }
+    .faq-item.open .faq-icon { transform: rotate(45deg); }
+    .faq-item.open .faq-a { display: block; }
+
+    /* CTA */
+    .cta-section {
+      background: linear-gradient(135deg, #1e3a8a, #0ea5e9);
+      border-radius: 16px;
+      padding: 3rem 2rem;
+      text-align: center;
+      margin: 0 1.5rem 4rem;
+    }
+    .cta-section h2 { font-size: 1.8rem; color: #fff; margin-bottom: 0.75rem; }
+    .cta-section p { color: rgba(255,255,255,0.8); margin-bottom: 1.5rem; }
+    .cta-btn {
+      display: inline-block;
+      background: #fff;
+      color: #1d4ed8;
+      font-weight: 700;
+      padding: 0.8rem 2rem;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+    .cta-btn:hover { background: #f0f9ff; text-decoration: none; }
+    .cta-sub { font-size: 0.82rem; color: rgba(255,255,255,0.6); margin-top: 0.75rem; }
+
+    /* FOOTER */
+    footer {
+      border-top: 1px solid #e2e8f0;
+      text-align: center;
+      padding: 2rem 1.5rem;
+      color: #475569;
+      font-size: 0.85rem;
+    }
+    footer a { color: #475569; }
+    footer a:hover { color: #0f172a; text-decoration: none; }
+    .footer-logo { font-size: 1.1rem; font-weight: 800; color: #0f172a; letter-spacing: -0.03em; }
+    .footer-logo span { color: #38bdf8; }
+    .footer-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.5rem; margin-bottom: 1rem; }
+
+    @media (max-width: 600px) {
+      .nav-link { display: none; }
+      .nav-links { gap: 8px; }
+      .hero h1 { font-size: 1.6rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="grad">
+    <a href="/" class="logo">Leav<span>up</span></a>
+    <div class="nav-links">
+      <a href="/fonctionnalites" class="nav-link">Fonctionnalités</a>
+      <a href="/tarifs" class="nav-link">Tarifs</a>
+      <a href="/comparatif" class="nav-link">Comparatif</a>
+      <a href="/vs-excel" class="nav-link">vs Excel</a>
+      <a href="/guide-conges-payes" class="nav-link">Guide légal</a>
+      <a href="/" class="nav-login">Se connecter</a>
+      <a href="/" class="nav-cta">Essai gratuit</a>
+    </div>
+  </nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="badge">COMPARATIF 2026</div>
+  <h1>Leavup vs <em>Lucca, Factorial, PayFit</em><br>Qui choisir pour votre PME ?</h1>
+  <p>Comparaison objective des logiciels de gestion des congés et absences : fonctionnalités, prix, conformité droit français, facilité de mise en place.</p>
+  <a href="/" class="hero-cta">Essayer Leavup gratuitement →</a>
+</div>
+
+<!-- PRIX PAR OUTIL -->
+<section>
+  <h2>Prix pour 20 utilisateurs / mois</h2>
+  <p class="subtitle">Tarifs indicatifs publics — hors options et modules complémentaires.</p>
+  <div class="price-grid">
+    <div class="price-card featured">
+      <div class="tool-name">Leavup</div>
+      <div class="price">0–49 €<span>/mois</span></div>
+      <div class="basis">forfait fixe selon la taille</div>
+      <div class="note">✓ Gratuit ≤ 10 · 39 € ≤ 30 · 49 € ≤ 50<br>✓ Sur devis au-delà · Sans engagement</div>
+    </div>
+    <div class="price-card">
+      <div class="tool-name">Lucca Timmi</div>
+      <div class="price">~140 €<span>/mois</span></div>
+      <div class="basis">~7 €/user/mois</div>
+      <div class="note">Module absences seul<br>Suite RH en option</div>
+    </div>
+    <div class="price-card">
+      <div class="tool-name">Factorial</div>
+      <div class="price">~180 €<span>/mois</span></div>
+      <div class="basis">~9 €/user/mois</div>
+      <div class="note">Suite RH complète<br>Congés inclus</div>
+    </div>
+    <div class="price-card">
+      <div class="tool-name">PayFit</div>
+      <div class="price">~260 €<span>/mois</span></div>
+      <div class="basis">paie + RH groupés</div>
+      <div class="note">Paie automatisée<br>Congés intégrés</div>
+    </div>
+    <div class="price-card">
+      <div class="tool-name">Eurécia</div>
+      <div class="price">~100 €<span>/mois</span></div>
+      <div class="basis">~5 €/user/mois</div>
+      <div class="note">Module congés<br>Option SIRH</div>
+    </div>
+  </div>
+</section>
+
+<!-- CALCULATEUR D'ÉCONOMIES -->
+<section>
+  <h2>Calculez vos économies avec Leavup</h2>
+  <p class="subtitle">Estimez ce que vous paieriez avec chaque solution pour votre équipe.</p>
+  <div class="calculator">
+    <div class="calc-grid">
+      <div class="calc-field">
+        <label for="nb-users">Nombre d'employés</label>
+        <input type="number" id="nb-users" value="15" min="1" max="500" />
+      </div>
+      <div class="calc-field">
+        <label for="competitor">Comparer avec</label>
+        <select id="competitor">
+          <option value="lucca">Lucca Timmi Absences (7 €/user)</option>
+          <option value="factorial">Factorial (9 €/user)</option>
+          <option value="payfit">PayFit (13 €/user)</option>
+          <option value="eurecia">Eurécia (5 €/user)</option>
+        </select>
+      </div>
+    </div>
+    <div class="calc-result" id="calc-result">
+      <!-- filled by JS -->
+    </div>
+  </div>
+</section>
+
+<!-- TABLEAU COMPARATIF FONCTIONNALITÉS -->
+<section>
+  <h2>Comparatif fonctionnalités</h2>
+  <p class="subtitle">Fonctionnalités clés pour la gestion des congés et absences.</p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Fonctionnalité</th>
+          <th class="highlight">Leavup</th>
+          <th>Lucca Timmi</th>
+          <th>Factorial</th>
+          <th>PayFit</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="feature">Plan gratuit</td>
+          <td class="highlight"><span class="check">✓</span> jusqu'à 10</td>
+          <td><span class="cross">✗</span></td>
+          <td><span class="partial">Essai 14j</span></td>
+          <td><span class="cross">✗</span></td>
+        </tr>
+        <tr>
+          <td class="feature">Jours ouvrés ET ouvrables</td>
+          <td class="highlight"><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+        </tr>
+        <tr>
+          <td class="feature">11 jours fériés légaux FR</td>
+          <td class="highlight"><span class="check">✓</span> automatique</td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+        </tr>
+        <tr>
+          <td class="feature">Alerte 24j consécutifs (L3141-17)</td>
+          <td class="highlight"><span class="check">✓</span></td>
+          <td><span class="partial">Configurable</span></td>
+          <td><span class="cross">✗</span></td>
+          <td><span class="partial">Partiel</span></td>
+        </tr>
+        <tr>
+          <td class="feature">Fractionnement (L3141-19)</td>
+          <td class="highlight"><span class="check">✓</span> calcul auto</td>
+          <td><span class="check">✓</span></td>
+          <td><span class="partial">Manuel</span></td>
+          <td><span class="check">✓</span></td>
+        </tr>
+        <tr>
+          <td class="feature">Gestion RTT</td>
+          <td class="highlight"><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+        </tr>
+        <tr>
+          <td class="feature">Télétravail (non décompté)</td>
+          <td class="highlight"><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+        </tr>
+        <tr>
+          <td class="feature">Export calendrier .ics</td>
+          <td class="highlight"><span class="check">✓</span> par employé</td>
+          <td><span class="check">✓</span></td>
+          <td><span class="partial">Partiel</span></td>
+          <td><span class="cross">✗</span></td>
+        </tr>
+        <tr>
+          <td class="feature">Export Excel / CSV</td>
+          <td class="highlight"><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+        </tr>
+        <tr>
+          <td class="feature">Validation multi-niveaux</td>
+          <td class="highlight"><span class="partial">Manager + Admin</span></td>
+          <td><span class="check">✓</span> N niveaux</td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+        </tr>
+        <tr>
+          <td class="feature">Application mobile</td>
+          <td class="highlight"><span class="partial">PWA responsive</span></td>
+          <td><span class="check">✓</span> iOS/Android</td>
+          <td><span class="check">✓</span> iOS/Android</td>
+          <td><span class="check">✓</span> iOS/Android</td>
+        </tr>
+        <tr>
+          <td class="feature">Hébergement données FR</td>
+          <td class="highlight"><span class="check">✓</span> France</td>
+          <td><span class="check">✓</span> France</td>
+          <td><span class="partial">EU</span></td>
+          <td><span class="check">✓</span> France</td>
+        </tr>
+        <tr>
+          <td class="feature">Paie intégrée</td>
+          <td class="highlight"><span class="cross">✗</span></td>
+          <td><span class="cross">✗</span></td>
+          <td><span class="partial">Module</span></td>
+          <td><span class="check">✓</span> cœur du produit</td>
+        </tr>
+        <tr>
+          <td class="feature">Support en français</td>
+          <td class="highlight"><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+          <td><span class="partial">Chat EN/FR</span></td>
+          <td><span class="check">✓</span></td>
+        </tr>
+        <tr>
+          <td class="feature">Mise en place (sans IT)</td>
+          <td class="highlight"><span class="check">✓</span> &lt; 1h</td>
+          <td><span class="partial">½ journée</span></td>
+          <td><span class="partial">1–2 jours</span></td>
+          <td><span class="cross">✗</span> accompagnement requis</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- POUR QUI -->
+<section>
+  <h2>Quelle solution pour quel profil ?</h2>
+  <p class="subtitle">Chaque outil a son cas d'usage idéal.</p>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;">
+    <div style="background:rgba(29,78,216,0.1);border:1px solid rgba(29,78,216,0.3);border-radius:12px;padding:1.25rem;">
+      <div style="font-size:1.4rem;margin-bottom:0.5rem;">🚀</div>
+      <strong style="color:#38bdf8;display:block;margin-bottom:0.5rem;">Leavup</strong>
+      <p style="font-size:0.85rem;color:#94a3b8;">PME de 1 à 50 salariés qui veut une gestion des congés simple, conforme au droit français, sans payer pour des modules inutiles. Idéal pour démarrer en moins d'une heure.</p>
+    </div>
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:1.25rem;">
+      <div style="font-size:1.4rem;margin-bottom:0.5rem;">🏢</div>
+      <strong style="color:#0f172a;display:block;margin-bottom:0.5rem;">Lucca Timmi</strong>
+      <p style="font-size:0.85rem;color:#94a3b8;">ETI de 50 à 500 salariés avec des règles RH complexes (cycles, multi-établissements) et besoin d'intégration avec d'autres modules Lucca (notes de frais, paie).</p>
+    </div>
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:1.25rem;">
+      <div style="font-size:1.4rem;margin-bottom:0.5rem;">📊</div>
+      <strong style="color:#0f172a;display:block;margin-bottom:0.5rem;">Factorial</strong>
+      <p style="font-size:0.85rem;color:#94a3b8;">Start-up ou PME internationale qui veut une suite RH all-in-one (recrutement, onboarding, congés, évaluations) dans une interface moderne.</p>
+    </div>
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:1.25rem;">
+      <div style="font-size:1.4rem;margin-bottom:0.5rem;">💰</div>
+      <strong style="color:#0f172a;display:block;margin-bottom:0.5rem;">PayFit</strong>
+      <p style="font-size:0.85rem;color:#94a3b8;">PME française qui veut externaliser entièrement la paie ET les congés dans un seul outil. Budget plus élevé mais gain de temps sur la gestion de la paie.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section>
+  <h2>Questions fréquentes</h2>
+  <p class="subtitle"></p>
+  <div class="faq-list">
+    <div class="faq-item open">
+      <button class="faq-q">
+        Quelle est la différence entre Leavup et Lucca ?
+        <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-a">Lucca est une suite RH complète à partir de 7 €/utilisateur/mois, adaptée aux moyennes et grandes entreprises. Leavup est un logiciel spécialisé en gestion des congés, <strong>gratuit jusqu'à 10 utilisateurs</strong> et à 39 €/mois ensuite, idéal pour les PME qui n'ont pas besoin d'une suite RH complète.</div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-q">
+        Leavup est-il conforme à la législation française ?
+        <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-a">Oui. Leavup gère les jours ouvrés (25j, lun-ven) et ouvrables (30j, lun-sam), les 11 jours fériés légaux, le fractionnement (art. L3141-19), et les alertes sur les 24 jours consécutifs maximum (art. L3141-17) conformément au Code du travail français.</div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-q">
+        Peut-on migrer depuis Factorial ou PayFit vers Leavup ?
+        <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-a">La migration est simple : les employés sont invités par email, les soldes initiaux sont saisis manuellement. L'onboarding d'une équipe de 10 personnes prend moins d'une heure, sans intervention technique.</div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-q">
+        Quel logiciel est le moins cher pour une PME de 20 personnes ?
+        <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-a">Pour 20 personnes : <strong>Leavup Teams 39 €/mois</strong>, Factorial ~180 €/mois, Lucca Timmi ~140 €/mois, PayFit ~260 €/mois. Leavup est le plus économique pour une gestion des congés pure, avec un écart de 100 à 220 € par mois selon le concurrent.</div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<div class="cta-section">
+  <h2>Prêt à simplifier vos congés ?</h2>
+  <p>Démarrez gratuitement, sans carte bancaire. Migration depuis votre solution actuelle en moins d'une heure.</p>
+  <a href="/" class="cta-btn">Essai gratuit — 0 €</a>
+  <p class="cta-sub">Gratuit jusqu'à 10 utilisateurs · Données hébergées en France · RGPD</p>
+</div>
+
+  <footer>
+    <div class="footer-logo">Leav<span>up</span></div>
+    <p style="margin-top:10px;display:flex;flex-wrap:wrap;justify-content:center;gap:6px 20px;">
+      <a href="/">Accueil</a>
+      <a href="/fonctionnalites">Fonctionnalités</a>
+      <a href="/tarifs">Tarifs</a>
+      <a href="/comparatif">Comparatif</a>
+      <a href="/vs-excel">vs Excel</a>
+      <a href="/guide-conges-payes">Guide légal</a>
+      <a href="/mentions-legales">Mentions légales</a>
+      <a href="/privacy">Confidentialité</a>
+    </p>
+    <p>© 2026 Leavup — Logiciel de gestion des congés pour PME françaises</p>
+  </footer>
+
+<script>
+  // ── FAQ toggle ──────────────────────────────────────────────────────────────
+  document.querySelectorAll('.faq-q').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const item = btn.closest('.faq-item');
+      const wasOpen = item.classList.contains('open');
+      document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+      if (!wasOpen) item.classList.add('open');
+    });
+  });
+
+  // ── Calculateur d'économies ─────────────────────────────────────────────────
+  const pricePerUser = { lucca: 7, factorial: 9, payfit: 13, eurecia: 5 };
+  const competitorNames = { lucca: 'Lucca', factorial: 'Factorial', payfit: 'PayFit', eurecia: 'Eurécia' };
+
+  function leavupPrice(n) {
+    if (n <= 10) return 0;
+    if (n <= 30) return 39;
+    if (n <= 50) return 49;
+    return null; // sur devis
+  }
+
+  function updateCalc() {
+    const n = parseInt(document.getElementById('nb-users').value) || 1;
+    const comp = document.getElementById('competitor').value;
+    const compMonthly = n * pricePerUser[comp];
+    const leavMonthly = leavupPrice(n);
+    const savings = leavMonthly !== null ? compMonthly - leavMonthly : null;
+    const savingsYear = savings !== null ? savings * 12 : null;
+
+    const leavLabel = leavMonthly === null ? 'Sur devis' : leavMonthly === 0 ? 'Gratuit' : leavMonthly + ' €';
+    const leavPeriod = leavMonthly === null
+      ? '50+ utilisateurs — contactez-nous'
+      : `${n} utilisateurs${leavMonthly === 0 ? ' (plan Starter)' : leavMonthly === 39 ? ' (plan Teams)' : leavMonthly === 49 ? ' (plan Business)' : ''}`;
+
+    document.getElementById('calc-result').innerHTML = `
+      <div class="result-card">
+        <div class="label">Leavup / mois</div>
+        <div class="value">${leavLabel}</div>
+        <div class="period">${leavPeriod}</div>
+      </div>
+      <div class="result-card">
+        <div class="label">${competitorNames[comp]} / mois</div>
+        <div class="value">${compMonthly} €</div>
+        <div class="period">${n} × ${pricePerUser[comp]} €</div>
+      </div>
+      <div class="result-card savings">
+        <div class="label">Économie / an</div>
+        <div class="value">${savingsYear !== null && savings > 0 ? savingsYear.toLocaleString('fr-FR') + ' €' : '—'}</div>
+        <div class="period">${savingsYear !== null && savings > 0 ? savings + ' €/mois avec Leavup' : leavMonthly === null ? 'Contactez-nous pour un devis' : 'Leavup plus coûteux'}</div>
+      </div>
+    `;
+  }
+
+  document.getElementById('nb-users').addEventListener('input', updateCalc);
+  document.getElementById('competitor').addEventListener('change', updateCalc);
+  updateCalc();
+</script>
+</body>
+</html>

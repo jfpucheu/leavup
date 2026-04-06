@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#0f172a"/>
+      <stop offset="60%"  stop-color="#1e3a8a"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <!-- Cercles décoratifs flous -->
+    <radialGradient id="glow1" cx="50%" cy="50%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#38bdf8" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow2" cx="50%" cy="50%">
+      <stop offset="0%" stop-color="#1d4ed8" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#1d4ed8" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Fond -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Halos décoratifs -->
+  <ellipse cx="950" cy="150" rx="400" ry="400" fill="url(#glow1)"/>
+  <ellipse cx="250" cy="500" rx="350" ry="350" fill="url(#glow2)"/>
+
+  <!-- Grille de points subtile -->
+  <pattern id="dots" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+    <circle cx="1" cy="1" r="1" fill="white" fill-opacity="0.06"/>
+  </pattern>
+  <rect width="1200" height="630" fill="url(#dots)"/>
+
+  <!-- Logo texte centré -->
+  <text x="600" y="300" font-family="Inter, system-ui, -apple-system, sans-serif"
+        font-weight="800" font-size="140" text-anchor="middle" letter-spacing="-4">
+    <tspan fill="white">Leav</tspan><tspan fill="#38bdf8">up</tspan>
+  </text>
+
+  <!-- Tagline -->
+  <text x="600" y="380" font-family="Inter, system-ui, -apple-system, sans-serif"
+        font-weight="500" font-size="32" text-anchor="middle"
+        fill="white" fill-opacity="0.6" letter-spacing="0.5">
+    Gestion des congés simplifiée pour les PME
+  </text>
+
+  <!-- Pill "Hébergé en France · Conforme RGPD" -->
+  <rect x="432" y="430" width="336" height="44" rx="22"
+        fill="white" fill-opacity="0.1" stroke="white" stroke-opacity="0.2" stroke-width="1"/>
+  <text x="600" y="458" font-family="Inter, system-ui, -apple-system, sans-serif"
+        font-weight="500" font-size="18" text-anchor="middle"
+        fill="white" fill-opacity="0.75">
+    Hébergé en France · Conforme RGPD
+  </text>
+</svg>

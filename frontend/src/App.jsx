@@ -31,13 +31,14 @@ function saveSession(s) { sessionStorage.setItem('leavup_session', JSON.stringif
 function clearSession() { sessionStorage.removeItem('leavup_session'); }
 
 // ── Utilitaires ────────────────────────────────────────────────────────────
-function workDays(start, end) {
+function workDays(start, end, dayCountType = 'ouvre') {
   let n = 0;
   const d = new Date(start + 'T12:00:00');
   const e = new Date(end   + 'T12:00:00');
   while (d <= e) {
     const w = d.getDay();
-    if (w !== 0 && w !== 6) n++;
+    // ouvrable : lun-sam (exclut dim=0) ; ouvré : lun-ven (exclut sam=6 et dim=0)
+    if (dayCountType === 'ouvrable' ? w !== 0 : (w !== 0 && w !== 6)) n++;
     d.setDate(d.getDate() + 1);
   }
   return n;
@@ -426,9 +427,17 @@ function PricingSection({ onRegister }) {
       ctaBg: '#0ea5e9',
     },
     {
+      name: 'Business', color: 'purple', price: 49, priceAnnual: 39, period: '/mois',
+      users: "jusqu'à 50 utilisateurs",
+      features: ['Tout Teams', 'Rapports avancés', 'Multi-équipes', 'Support téléphonique'],
+      cta: 'Contactez-nous',
+      onCta: () => setContactSubject('Leavup Business'),
+      ctaBg: '#7c3aed',
+    },
+    {
       name: 'Enterprise', color: 'dark', price: null, priceAnnual: null, period: null,
-      users: '30+ utilisateurs',
-      features: ['Tout Teams', 'Intégration SIRH', 'SSO / SAML', 'Hébergement dédié', 'Contrat sur-mesure'],
+      users: '50+ utilisateurs',
+      features: ['Tout Business', 'Intégration SIRH', 'SSO / SAML', 'Hébergement dédié', 'Contrat sur-mesure'],
       cta: 'Contactez-nous',
       onCta: () => setContactSubject('Leavup Enterprise'),
       ctaBg: '#0ea5e9',
@@ -465,9 +474,10 @@ function PricingSection({ onRegister }) {
       {/* Cards */}
       <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap', maxWidth: 1100, margin: '0 auto' }}>
         {plans.map(p => {
-          const isDark = p.color === 'gradient' || p.color === 'dark';
+          const isDark = p.color === 'gradient' || p.color === 'dark' || p.color === 'purple';
           const bg = p.color === 'gradient' ? 'linear-gradient(135deg,#0f172a,#1d4ed8)'
                    : p.color === 'dark'     ? '#0f172a'
+                   : p.color === 'purple'   ? 'linear-gradient(135deg,#4c1d95,#7c3aed)'
                    : 'white';
           const pl = priceLabel(p);
           return (
@@ -522,13 +532,13 @@ function PricingSection({ onRegister }) {
   );
 }
 
-function LandingPage({ onLogin, onRegister, onPrivacy }) {
+function LandingPage({ onLogin, onRegister, onPrivacy, onMentions }) {
   const GRAD = 'linear-gradient(160deg, #0f172a 0%, #1e3a8a 60%, #0ea5e9 100%)';
   const features = [
-    { icon: '📅', title: 'Demandes en ligne', desc: 'Vos salariés posent leurs absences depuis n\'importe où, en quelques clics.' },
-    { icon: '✅', title: 'Validation rapide', desc: 'Approuvez ou refusez en un clic. Notifications email automatiques.' },
-    { icon: '📊', title: 'Planning visuel', desc: 'Visualisez toutes les absences de votre équipe sur un calendrier partagé.' },
-    { icon: '👥', title: 'Gestion d\'équipes', desc: 'Déléguez la validation des congés à des chefs d\'équipe.' },
+    { icon: '📅', title: 'Congés & absences', desc: 'CP, RTT, sans solde, événements familiaux — posés en ligne, validés en un clic.' },
+    { icon: '🏠', title: 'Télétravail intégré', desc: 'Déclarez et suivez les jours de télétravail, avec des limites configurables par semaine ou par mois.' },
+    { icon: '📊', title: 'Planning visuel', desc: 'Visualisez congés et télétravail de toute l\'équipe sur un calendrier partagé.' },
+    { icon: '📈', title: 'Analytics & rapports', desc: 'Taux d\'absentéisme, soldes moyens, mois chargés — pour piloter vos RH efficacement.' },
   ];
   return (
     <div style={{ fontFamily: '-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif', background: '#fff', minHeight: '100vh' }}>
@@ -541,7 +551,20 @@ function LandingPage({ onLogin, onRegister, onPrivacy }) {
         <span style={{ fontSize: 22, fontWeight: 800, color: 'white', letterSpacing: '-0.04em' }}>
           Leav<span style={{ color: '#38bdf8' }}>up</span>
         </span>
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          {[
+            { label: 'Fonctionnalités', href: '/fonctionnalites' },
+            { label: 'Tarifs',          href: '/tarifs' },
+            { label: 'Comparatif',      href: '/comparatif' },
+            { label: 'vs Excel',        href: '/vs-excel' },
+            { label: 'Guide légal',     href: '/guide-conges-payes' },
+          ].map(l => (
+            <a key={l.href} href={l.href} style={{
+              color: 'rgba(255,255,255,0.75)', fontSize: 13, fontWeight: 500,
+              textDecoration: 'none', padding: '4px 2px',
+              display: window.innerWidth < 768 ? 'none' : 'inline',
+            }}>{l.label}</a>
+          ))}
           <button onClick={onLogin} style={{
             background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)',
             color: 'white', borderRadius: 8, padding: '8px 18px', fontSize: 13,
@@ -566,9 +589,9 @@ function LandingPage({ onLogin, onRegister, onPrivacy }) {
         <h1 style={{
           fontSize: 42, fontWeight: 800, color: 'white', letterSpacing: '-0.04em',
           maxWidth: 620, margin: '0 auto 18px', lineHeight: 1.15,
-        }}>La gestion des absences simplifiée pour votre équipe</h1>
-        <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.72)', maxWidth: 480, margin: '0 auto 36px', lineHeight: 1.6 }}>
-          Planifiez, validez et suivez les congés de vos employés — sans paperasse, sans tableur Excel.
+        }}>La gestion des absences et télétravail simplifiée pour votre équipe</h1>
+        <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.72)', maxWidth: 500, margin: '0 auto 36px', lineHeight: 1.6 }}>
+          Planifiez, validez et suivez les absences et le télétravail de vos équipes — sans paperasse, sans tableur Excel.
         </p>
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
           <button onClick={onRegister} style={{
@@ -629,17 +652,104 @@ function LandingPage({ onLogin, onRegister, onPrivacy }) {
         <PricingSection onRegister={onRegister} />
       </section>
 
+      {/* RGPD */}
+      <section style={{ padding: '64px 24px', maxWidth: 960, margin: '0 auto' }}>
+        <h2 style={{ textAlign: 'center', fontSize: 26, fontWeight: 800, color: '#0f172a', marginBottom: 8, letterSpacing: '-0.03em' }}>
+          Pourquoi Leavup est conforme RGPD
+        </h2>
+        <p style={{ textAlign: 'center', fontSize: 14, color: '#64748b', marginBottom: 48, maxWidth: 520, margin: '0 auto 48px' }}>
+          Les données RH sont sensibles. Voici concrètement ce que nous faisons pour les protéger.
+        </p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 20 }}>
+          {[
+            {
+              icon: '🇫🇷',
+              title: 'Hébergement 100 % en France',
+              desc: 'Vos données sont stockées sur des serveurs situés en France, soumis au droit français et européen. Aucun transfert hors UE.',
+            },
+            {
+              icon: '🔐',
+              title: 'Chiffrement AES-256 des données personnelles',
+              desc: 'Les données à caractère personnel (noms, emails, adresses) sont chiffrées en base avec AES-256-GCM. Même en cas de fuite, elles sont illisibles.',
+            },
+            {
+              icon: '🙈',
+              title: 'Accès strictement limité',
+              desc: 'Chaque organisation est isolée. Un administrateur ne voit que les données de sa propre entreprise. Aucun accès croisé n\'est possible.',
+            },
+            {
+              icon: '🗑️',
+              title: 'Droit à l\'effacement',
+              desc: 'L\'administrateur peut supprimer l\'intégralité du compte et des données depuis les paramètres, sans avoir à contacter le support.',
+            },
+            {
+              icon: '📦',
+              title: 'Portabilité des données',
+              desc: 'Export JSON de toutes vos données à tout moment depuis les paramètres. Vous n\'êtes jamais enfermé.',
+            },
+            {
+              icon: '📋',
+              title: 'Base légale explicite (art. 6 RGPD)',
+              desc: 'Le traitement est fondé sur l\'exécution du contrat (art. 6.1.b) et le consentement pour les communications (art. 6.1.a). Aucune donnée n\'est revendue ni exploitée à des fins publicitaires.',
+            },
+          ].map(item => (
+            <div key={item.title} style={{
+              background: '#f8fafc', borderRadius: 14, padding: '24px',
+              border: '1px solid #e2e8f0', display: 'flex', gap: 16, alignItems: 'flex-start',
+            }}>
+              <div style={{ fontSize: 28, flexShrink: 0, marginTop: 2 }}>{item.icon}</div>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', marginBottom: 6 }}>{item.title}</div>
+                <div style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6 }}>{item.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{
+          marginTop: 40, background: 'linear-gradient(135deg,#0f172a,#1d4ed8)',
+          borderRadius: 14, padding: '24px 32px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          flexWrap: 'wrap', gap: 16,
+        }}>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 4 }}>Une question sur vos données ?</div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)' }}>Consultez notre politique de confidentialité ou contactez-nous directement.</div>
+          </div>
+          <button onClick={onPrivacy} style={{
+            background: '#fff', color: '#1d4ed8', border: 'none', borderRadius: 8,
+            padding: '10px 22px', fontWeight: 700, fontSize: 13, cursor: 'pointer', flexShrink: 0,
+          }}>Politique de confidentialité →</button>
+        </div>
+      </section>
+
       {/* Footer */}
-      <footer style={{ background: '#0f172a', padding: '28px 24px', textAlign: 'center' }}>
+      <footer style={{ background: '#0f172a', padding: '36px 24px', textAlign: 'center' }}>
         <span style={{ fontSize: 18, fontWeight: 800, color: 'white', letterSpacing: '-0.03em' }}>
           Leav<span style={{ color: '#38bdf8' }}>up</span>
         </span>
-        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', marginTop: 8 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '8px 24px', marginTop: 16, marginBottom: 12 }}>
+          {[
+            { label: 'Fonctionnalités',    href: '/fonctionnalites' },
+            { label: 'Tarifs',             href: '/tarifs' },
+            { label: 'Comparatif',         href: '/comparatif' },
+            { label: 'vs Excel',           href: '/vs-excel' },
+            { label: 'Guide congés payés', href: '/guide-conges-payes' },
+          ].map(l => (
+            <a key={l.href} href={l.href} style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, textDecoration: 'none' }}
+              onMouseOver={e => e.target.style.color='rgba(255,255,255,0.9)'}
+              onMouseOut={e => e.target.style.color='rgba(255,255,255,0.5)'}
+            >{l.label}</a>
+          ))}
+        </div>
+        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', marginTop: 8 }}>
           © {new Date().getFullYear()} Leavup — Gestion des absences simplifiée
         </p>
-        <p style={{ marginTop: 6 }}>
-          <button onClick={onPrivacy} style={{ background:'none', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.45)', fontSize: 11, textDecoration:'underline' }}>
+        <p style={{ marginTop: 6, display: 'flex', justifyContent: 'center', gap: 16, flexWrap: 'wrap' }}>
+          <button onClick={onPrivacy} style={{ background:'none', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.35)', fontSize: 11, textDecoration:'underline' }}>
             Politique de confidentialité
+          </button>
+          <button onClick={onMentions} style={{ background:'none', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.35)', fontSize: 11, textDecoration:'underline' }}>
+            Mentions légales
           </button>
         </p>
       </footer>
@@ -648,68 +758,211 @@ function LandingPage({ onLogin, onRegister, onPrivacy }) {
 }
 
 // ── Politique de confidentialité ──────────────────────────────────────────
-function PrivacyPage({ onBack }) {
+function PrivacyPage({ onBack, onMentions }) {
   const GRAD = 'linear-gradient(160deg, #0f172a 0%, #1e3a8a 60%, #0ea5e9 100%)';
-  const section = (title, content) => (
+  const S = (title, content) => (
     <div style={{ marginBottom: 24 }}>
       <h3 style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', marginBottom: 8 }}>{title}</h3>
-      <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.7 }}>{content}</div>
+      <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.75 }}>{content}</div>
     </div>
   );
+  const li = { marginBottom: 4 };
   return (
     <div style={{ minHeight: '100vh', background: GRAD, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '2rem 1rem' }}>
-      <div style={{ width: '100%', maxWidth: 680 }}>
+      <div style={{ width: '100%', maxWidth: 720 }}>
         <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.7)', fontSize: 13, marginBottom: 16, padding: 0 }}>
           ← Retour
         </button>
         <div style={{ background: 'white', borderRadius: 18, padding: '2rem 2.5rem', boxShadow: '0 8px 32px rgba(15,23,42,0.3)' }}>
           <h1 style={{ fontSize: 22, fontWeight: 800, color: '#0f172a', marginBottom: 4 }}>Politique de confidentialité</h1>
-          <p style={{ fontSize: 12, color: '#94a3b8', marginBottom: 28 }}>Dernière mise à jour : {new Date().toLocaleDateString('fr-FR')}</p>
+          <p style={{ fontSize: 12, color: '#94a3b8', marginBottom: 28 }}>Dernière mise à jour : mars 2026</p>
 
-          {section('1. Responsable du traitement',
-            <p>Leavup est édité et hébergé en France. Le responsable du traitement est l'administrateur de chaque organisation utilisant la plateforme Leavup.</p>
+          {S('1. Responsable du traitement',
+            <div>
+              <p style={{ marginBottom: 6 }}>Le responsable du traitement est :</p>
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '12px 16px', fontSize: 13 }}>
+                <strong>Jean-François PUCHEU</strong> — Éditeur de Leavup<br />
+                Email : <a href="mailto:contact@leavup.com" style={{ color: '#0ea5e9' }}>contact@leavup.com</a><br />
+                Hébergement : Serveur privé dédié, France (UE)
+              </div>
+              <p style={{ marginTop: 8 }}>Chaque organisation utilisant Leavup est également responsable du traitement des données de ses propres salariés au sens du RGPD.</p>
+            </div>
           )}
-          {section('2. Données collectées',
+
+          {S('2. Données collectées',
             <ul style={{ paddingLeft: 20 }}>
-              <li>Données d'identification : prénom, nom, identifiant de connexion</li>
-              <li>Coordonnées : adresse email, numéro de téléphone, adresse postale</li>
-              <li>Données professionnelles : date d'entrée, contrat, soldes de congés</li>
-              <li>Données de connexion : identifiant, mot de passe haché (bcrypt)</li>
+              <li style={li}>Identité : prénom, nom</li>
+              <li style={li}>Contact : adresse email</li>
+              <li style={li}>Données professionnelles : date d'entrée, type de contrat, soldes de congés</li>
+              <li style={li}>Données optionnelles : numéro de téléphone, adresse postale</li>
+              <li style={li}>Données de connexion : mot de passe haché (bcrypt, non réversible)</li>
+              <li style={li}>Données de consentement : date et heure d'acceptation de la politique de confidentialité</li>
+              <li style={li}>Données d'usage : demandes d'absence, validations, historique</li>
             </ul>
           )}
-          {section('3. Finalités du traitement',
+
+          {S('3. Finalités',
             <ul style={{ paddingLeft: 20 }}>
-              <li>Gestion des demandes d'absence et de congés</li>
-              <li>Communication par email (notifications de congés)</li>
-              <li>Administration des comptes utilisateurs</li>
+              <li style={li}>Gestion des congés, absences et télétravail</li>
+              <li style={li}>Notifications email liées aux demandes d'absence</li>
+              <li style={li}>Administration des comptes et des organisations</li>
+              <li style={li}>Respect des obligations légales (Code du travail, RGPD)</li>
             </ul>
           )}
-          {section('4. Base légale',
-            <p>Le traitement est fondé sur l'exécution d'un contrat (gestion des absences en entreprise) et, pour la collecte initiale, sur le consentement de l'utilisateur (art. 6(1)(b) et 6(1)(a) du RGPD).</p>
+
+          {S('4. Base légale (art. 6 RGPD)',
+            <ul style={{ paddingLeft: 20 }}>
+              <li style={li}><strong>Art. 6.1.b</strong> — Exécution du contrat de service (abonnement Leavup)</li>
+              <li style={li}><strong>Art. 6.1.a</strong> — Consentement explicite recueilli à l'inscription</li>
+              <li style={li}><strong>Art. 6.1.c</strong> — Obligation légale (conservation des données RH imposée par le Code du travail)</li>
+            </ul>
           )}
-          {section('5. Sécurité des données',
-            <p>Toutes les données personnelles sont chiffrées en base de données. Les mots de passe sont hachés (bcrypt). L'infrastructure est hébergée en France.</p>
-          )}
-          {section('6. Durée de conservation',
-            <p>Les données sont conservées pendant toute la durée de l'abonnement actif, puis supprimées dans un délai de 30 jours après la résiliation du compte.</p>
-          )}
-          {section('7. Vos droits',
-            <>
-              <p style={{ marginBottom: 8 }}>Conformément au RGPD, vous disposez des droits suivants :</p>
-              <ul style={{ paddingLeft: 20 }}>
-                <li><strong>Droit d'accès</strong> : exporter vos données personnelles depuis votre espace</li>
-                <li><strong>Droit de rectification</strong> : modifier vos informations via votre profil</li>
-                <li><strong>Droit à l'effacement</strong> : demander la suppression de votre compte à votre administrateur</li>
-                <li><strong>Droit à la portabilité</strong> : télécharger vos données au format JSON</li>
+
+          {S('5. Durée de conservation',
+            <div>
+              <ul style={{ paddingLeft: 20, marginBottom: 8 }}>
+                <li style={li}><strong>Données de compte actif</strong> : conservées pendant toute la durée de l'abonnement</li>
+                <li style={li}><strong>Après résiliation</strong> : suppression définitive sous 30 jours</li>
+                <li style={li}><strong>Historique des congés</strong> : 5 ans (obligation Code du travail, art. L3243-4)</li>
+                <li style={li}><strong>Données de consentement</strong> : 5 ans à compter de la date d'acceptation</li>
+                <li style={li}><strong>Logs de connexion</strong> : 12 mois (obligation LCEN)</li>
               </ul>
-              <p style={{ marginTop: 8 }}>Pour exercer ces droits, contactez votre administrateur ou écrivez à l'éditeur de la plateforme.</p>
+              <p style={{ fontSize: 12, color: '#64748b' }}>
+                La suppression du compte efface immédiatement et définitivement toutes les données de l'organisation via cascade BDD (ON DELETE CASCADE).
+              </p>
+            </div>
+          )}
+
+          {S('6. Sécurité',
+            <ul style={{ paddingLeft: 20 }}>
+              <li style={li}>Mots de passe hachés avec bcrypt (facteur de coût 10)</li>
+              <li style={li}>Sessions via cookie HttpOnly, SameSite=Strict, Secure en production</li>
+              <li style={li}>Transport chiffré HTTPS (TLS) entre le navigateur et le serveur</li>
+              <li style={li}>Données chiffrées en base (AES-256-GCM) lorsque la clé de chiffrement est configurée</li>
+              <li style={li}>Isolation stricte par organisation : chaque org ne peut accéder qu'à ses propres données</li>
+              <li style={li}>Infrastructure hébergée en France, accès restreint à l'éditeur</li>
+            </ul>
+          )}
+
+          {S('7. Cookies',
+            <div>
+              <p style={{ marginBottom: 8 }}>Leavup utilise <strong>uniquement un cookie de session</strong>, strictement nécessaire au fonctionnement du service :</p>
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '10px 14px', fontSize: 12 }}>
+                <strong>session</strong> — Cookie HttpOnly, durée de vie : session navigateur<br />
+                Finalité : maintien de la connexion authentifiée<br />
+                Aucun cookie publicitaire, analytique ou tiers n'est utilisé.
+              </div>
+            </div>
+          )}
+
+          {S('8. Vos droits (art. 15 à 22 RGPD)',
+            <>
+              <ul style={{ paddingLeft: 20, marginBottom: 8 }}>
+                <li style={li}><strong>Accès</strong> : consultez vos données depuis votre profil</li>
+                <li style={li}><strong>Rectification</strong> : modifiez vos informations depuis votre profil</li>
+                <li style={li}><strong>Effacement</strong> : supprimez votre compte depuis Paramètres → RGPD</li>
+                <li style={li}><strong>Portabilité</strong> : exportez toutes vos données (JSON) depuis Paramètres → RGPD</li>
+                <li style={li}><strong>Opposition / Limitation</strong> : contactez <a href="mailto:contact@leavup.com" style={{ color: '#0ea5e9' }}>contact@leavup.com</a></li>
+              </ul>
+              <p>En cas de litige non résolu, vous pouvez saisir la <strong>CNIL</strong> : <a href="https://www.cnil.fr" target="_blank" rel="noopener" style={{ color: '#0ea5e9' }}>www.cnil.fr</a></p>
             </>
           )}
-          {section('8. Transferts de données',
-            <p>Les données ne sont pas transférées en dehors de l'Union européenne.</p>
+
+          {S('9. Transferts hors UE',
+            <p>Aucune donnée n'est transférée en dehors de l'Union européenne. L'hébergement est assuré sur un serveur privé situé en France.</p>
           )}
-          {section('9. Contact',
-            <p>Pour toute question relative à vos données personnelles, contactez l'administrateur de votre organisation ou l'éditeur de Leavup.</p>
+
+          {S('10. Contact',
+            <p>
+              Pour toute question relative à vos données personnelles :<br />
+              <a href="mailto:contact@leavup.com" style={{ color: '#0ea5e9' }}>contact@leavup.com</a>
+              {onMentions && (
+                <> — <button onClick={onMentions} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0ea5e9', fontSize: 13, padding: 0, textDecoration: 'underline' }}>Mentions légales</button></>
+              )}
+            </p>
+          )}
+
+          <button onClick={onBack} style={{
+            marginTop: 8, background: '#0f172a', border: 'none', color: 'white',
+            borderRadius: 10, padding: '11px 24px', fontSize: 14, cursor: 'pointer', fontWeight: 700,
+          }}>← Retour</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Mentions légales ──────────────────────────────────────────────────────
+function MentionsLegalesPage({ onBack, onPrivacy }) {
+  const GRAD = 'linear-gradient(160deg, #0f172a 0%, #1e3a8a 60%, #0ea5e9 100%)';
+  const S = (title, content) => (
+    <div style={{ marginBottom: 22 }}>
+      <h3 style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', marginBottom: 8, paddingBottom: 6, borderBottom: '2px solid #e2e8f0' }}>{title}</h3>
+      <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.75 }}>{content}</div>
+    </div>
+  );
+  const card = (children) => (
+    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '12px 16px', fontSize: 13, marginTop: 8 }}>
+      {children}
+    </div>
+  );
+  return (
+    <div style={{ minHeight: '100vh', background: GRAD, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '2rem 1rem' }}>
+      <div style={{ width: '100%', maxWidth: 720 }}>
+        <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.7)', fontSize: 13, marginBottom: 16, padding: 0 }}>
+          ← Retour
+        </button>
+        <div style={{ background: 'white', borderRadius: 18, padding: '2rem 2.5rem', boxShadow: '0 8px 32px rgba(15,23,42,0.3)' }}>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: '#0f172a', marginBottom: 4 }}>Mentions légales</h1>
+          <p style={{ fontSize: 12, color: '#94a3b8', marginBottom: 28 }}>Conformément à la loi n° 2004-575 du 21 juin 2004 (LCEN) — Mars 2026</p>
+
+          {S('1. Éditeur du site', card(
+            <>
+              <strong>Jean-François PUCHEU</strong><br />
+              Éditeur et développeur de la plateforme Leavup<br />
+              Email : <a href="mailto:contact@leavup.com" style={{ color: '#0ea5e9' }}>contact@leavup.com</a>
+            </>
+          ))}
+
+          {S('2. Hébergement', <>
+            {card(
+              <>
+                <strong>Type :</strong> Serveur privé dédié<br />
+                <strong>Localisation :</strong> France (Union européenne)<br />
+                <strong>Opérateur :</strong> Jean-François PUCHEU — <a href="mailto:contact@leavup.com" style={{ color: '#0ea5e9' }}>contact@leavup.com</a>
+              </>
+            )}
+            <p style={{ marginTop: 8, fontSize: 12, color: '#64748b' }}>
+              L'ensemble des données est hébergé sur un serveur physique situé en France, sans transfert vers des infrastructures cloud tierces.
+            </p>
+          </>)}
+
+          {S('3. Propriété intellectuelle',
+            <p>L'ensemble du contenu (textes, graphismes, logotypes, code source) est la propriété exclusive de Jean-François PUCHEU. Toute reproduction sans autorisation écrite est interdite.</p>
+          )}
+
+          {S('4. Données personnelles',
+            <p>
+              Le traitement est fondé sur l'exécution du contrat (art. 6.1.b RGPD) et le consentement recueilli à l'inscription (art. 6.1.a RGPD).{' '}
+              {onPrivacy
+                ? <button onClick={onPrivacy} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0ea5e9', fontSize: 13, padding: 0, textDecoration: 'underline' }}>Voir la politique de confidentialité</button>
+                : 'Voir notre politique de confidentialité.'}
+            </p>
+          )}
+
+          {S('5. Cookies',
+            <p>Leavup utilise uniquement un cookie de session technique (HttpOnly, SameSite=Strict), strictement nécessaire à la connexion. Aucun cookie publicitaire ni analytique tiers n'est utilisé.</p>
+          )}
+
+          {S('6. Droit applicable',
+            <p>Les présentes mentions légales sont soumises au droit français. Tout litige sera soumis aux tribunaux compétents du ressort du domicile de l'éditeur.</p>
+          )}
+
+          {S('7. Contact & CNIL',
+            <p>
+              <a href="mailto:contact@leavup.com" style={{ color: '#0ea5e9' }}>contact@leavup.com</a>
+              {' '} — Pour toute réclamation : <a href="https://www.cnil.fr" target="_blank" rel="noopener" style={{ color: '#0ea5e9' }}>CNIL</a>, 3 place de Fontenoy, 75007 Paris.
+            </p>
           )}
 
           <button onClick={onBack} style={{
@@ -1437,12 +1690,13 @@ function AdminView({ session, onLogout, onLogoChange, onPlanChange }) {
   }, [load]);
 
   const pendingCount = leaves.filter(l => l.status === 'pending').length;
-  const TABS = ['Tableau de bord', 'Salariés', 'Équipes', 'Demandes', 'Contrats', 'Planning', 'Paramètres'];
+  const TABS = ['Tableau de bord', 'Salariés', 'Équipes', 'Demandes', 'Contrats', 'Planning', 'Analytics', 'Paramètres'];
 
   return (
     <Layout user={session.user} org={org} onLogout={onLogout}
       tabs={TABS} activeTab={tab} onTab={setTab} pendingCount={pendingCount}
-      fullWidth={tab === 5}>
+      fullWidth={tab === 5}
+    >
       {loading ? <Spinner /> : (
         <>
           {tab === 0 && <AdminDash users={users} leaves={leaves} settings={settings} teams={teams} />}
@@ -1451,7 +1705,8 @@ function AdminView({ session, onLogout, onLogoChange, onPlanChange }) {
           {tab === 3 && <AdminLeaves users={users} leaves={leaves} settings={settings} token={token} onRefresh={load} highlightLeave={highlightLeave} onHighlightDone={() => setHighlightLeave(null)} />}
           {tab === 4 && <AdminContracts contracts={contracts} token={token} onRefresh={load} />}
           {tab === 5 && <AdminPlanning users={users} leaves={leaves} onPendingClick={id => { setHighlightLeave(id); setTab(3); }} />}
-          {tab === 6 && <AdminSettings settings={settings} token={token} org={org} onSaved={(s) => setSettings(s)} onLogoChange={onLogoChange} onPlanChange={onPlanChange} />}
+          {tab === 6 && <AdminAnalytics token={token} />}
+          {tab === 7 && <AdminSettings settings={settings} token={token} org={org} onSaved={(s) => setSettings(s)} onLogoChange={onLogoChange} onPlanChange={onPlanChange} />}
         </>
       )}
     </Layout>
@@ -1566,8 +1821,9 @@ function AdminUsers({ users, contracts, leaves, teams, token, org, onRefresh }) 
     teamId:'',
   };
   const [form, setForm]       = useState(emptyForm);
-  const [formErr, setFormErr] = useState('');
-  const [saving, setSaving]   = useState(false);
+  const [formErr, setFormErr]       = useState('');
+  const [saving, setSaving]         = useState(false);
+  const [importModal, setImportModal] = useState(false);
 
   const takenDays = (userId) =>
     leaves.filter(l => l.user_id === userId && l.status === 'approved' && (l.leave_type || 'paid') === 'paid')
@@ -1823,8 +2079,10 @@ function AdminUsers({ users, contracts, leaves, teams, token, org, onRefresh }) 
 
       <div style={{ display:'flex', justifyContent:'flex-end', gap: 8, marginBottom: 12 }}>
         <CsvDownloadBtn url="/api/users/export" filename="salaries.csv" token={token} label="Exporter CSV" />
+        <Btn variant="ghost" onClick={() => setImportModal(true)}>↑ Importer CSV</Btn>
         <Btn onClick={openCreate}>+ Nouveau salarié</Btn>
       </div>
+      {importModal && <ImportCsvModal token={token} onClose={() => setImportModal(false)} onDone={() => { setImportModal(false); onRefresh(); }} />}
 
       {users.map(u => {
         const taken       = takenDays(u.id);
@@ -2509,7 +2767,8 @@ function AdminPlanning({ users, leaves, onPendingClick }) {
 const PLANS_DEF = [
   { id: 'free',       label: 'Starter',    price: 0,    maxUsers: 10,     desc: "jusqu'à 10 salariés" },
   { id: 'team',       label: 'Teams',      price: 39,   maxUsers: 30,     desc: "jusqu'à 30 salariés", badge: 'Populaire' },
-  { id: 'enterprise', label: 'Enterprise', price: null, maxUsers: 999999, desc: '30+ salariés' },
+  { id: 'business',   label: 'Business',   price: 49,   maxUsers: 50,     desc: "jusqu'à 50 salariés" },
+  { id: 'enterprise', label: 'Enterprise', price: null, maxUsers: 999999, desc: '50+ salariés' },
 ];
 
 function PlanSection({ currentPlan, userCount, token, onChange }) {
@@ -2673,6 +2932,9 @@ function AdminSettings({ settings, token, org, onSaved, onLogoChange, onPlanChan
   const [notifyAdminNew,       setNotifyAdminNew]       = useState(settings.notifyAdminNew  ?? true);
   const [leavePeriod,          setLeavePeriod]          = useState(settings.leavePeriod    || 'civil');
   const [leaveGrantMode,       setLeaveGrantMode]       = useState(settings.leaveGrantMode || 'progressive');
+  const [dayCountType,         setDayCountType]         = useState(settings.dayCountType   || 'ouvre');
+  const [remoteMaxPerWeek,     setRemoteMaxPerWeek]     = useState(settings.remoteMaxPerWeek  ?? -1);
+  const [remoteMaxPerMonth,    setRemoteMaxPerMonth]    = useState(settings.remoteMaxPerMonth ?? -1);
   const [saved, setSaved]     = useState(false);
   const [saving, setSaving]   = useState(false);
   const [logoSaving, setLogoSaving] = useState(false);
@@ -2725,6 +2987,9 @@ function AdminSettings({ settings, token, org, onSaved, onLogoChange, onPlanChan
         notifyAdminNew,
         leavePeriod,
         leaveGrantMode,
+        dayCountType,
+        remoteMaxPerWeek:  parseInt(remoteMaxPerWeek),
+        remoteMaxPerMonth: parseInt(remoteMaxPerMonth),
       }, token);
       onSaved(data);
       setSaved(true);
@@ -2871,6 +3136,41 @@ function AdminSettings({ settings, token, org, onSaved, onLogoChange, onPlanChan
         setAllowWhenExhausted
       )}
 
+      {/* Type de décompte des jours */}
+      <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, margin: '16px 0 8px', textTransform:'uppercase', letterSpacing:'.05em' }}>
+        Décompte des jours de congés
+      </div>
+      <div style={{ background: C.bgSecond, borderRadius: 10, padding: '14px', marginBottom: 12 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Jours ouvrés ou jours ouvrables ?</div>
+        <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 12 }}>
+          Définit comment les journées d'absence sont décomptées et le nombre de jours annuels.
+        </div>
+        {[
+          { id: 'ouvre',    label: 'Jours ouvrés',    desc: 'Lundi–vendredi hors jours fériés — 25 jours/an' },
+          { id: 'ouvrable', label: 'Jours ouvrables',  desc: 'Lundi–samedi hors jours fériés — 30 jours/an' },
+        ].map(opt => (
+          <label key={opt.id} onClick={() => { setDayCountType(opt.id); setSaved(false); }} style={{
+            display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer',
+            marginBottom: 8, padding: '10px 12px', borderRadius: 8,
+            border: `1.5px solid ${dayCountType === opt.id ? C.blue : C.border}`,
+            background: dayCountType === opt.id ? C.blueLight : 'white',
+          }}>
+            <div style={{
+              width: 16, height: 16, borderRadius: '50%', flexShrink: 0, marginTop: 1,
+              border: `2px solid ${dayCountType === opt.id ? C.blue : C.border}`,
+              background: dayCountType === opt.id ? C.blue : 'white',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              {dayCountType === opt.id && <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'white' }} />}
+            </div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: dayCountType === opt.id ? C.blueDark : C.text }}>{opt.label}</div>
+              <div style={{ fontSize: 12, color: C.textMuted }}>{opt.desc}</div>
+            </div>
+          </label>
+        ))}
+      </div>
+
       {/* Période de référence des congés */}
       <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, margin: '16px 0 8px', textTransform:'uppercase', letterSpacing:'.05em' }}>
         Période de référence des congés
@@ -2912,7 +3212,7 @@ function AdminSettings({ settings, token, org, onSaved, onLogoChange, onPlanChan
           Définit comment les jours sont crédités sur le compte du salarié.
         </div>
         {[
-          { id: 'progressive', label: 'Acquisition progressive', desc: 'Les jours s\'accumulent mois par mois (~2,08 j/mois pour 25 j/an).' },
+          { id: 'progressive', label: 'Acquisition progressive', desc: `Les jours s'accumulent mois par mois (~${dayCountType === 'ouvrable' ? '2,5' : '2,08'} j/mois pour ${dayCountType === 'ouvrable' ? '30' : '25'} j/an).` },
           { id: 'advance',     label: 'Attribution par anticipation', desc: 'Tous les jours de la période sont crédités dès le premier jour.' },
         ].map(opt => (
           <label key={opt.id} onClick={() => { setLeaveGrantMode(opt.id); setSaved(false); }} style={{
@@ -2937,16 +3237,335 @@ function AdminSettings({ settings, token, org, onSaved, onLogoChange, onPlanChan
         ))}
       </div>
 
+      {/* Limites de télétravail */}
+      <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, margin: '16px 0 8px', textTransform:'uppercase', letterSpacing:'.05em' }}>
+        Télétravail
+      </div>
+      <div style={{ background: C.bgSecond, borderRadius: 10, padding: '14px', marginBottom: 12 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Limites de jours de télétravail</div>
+        <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 12 }}>
+          Le télétravail n'est pas décompté des congés mais peut être limité. <strong>-1</strong> = illimité.
+        </div>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <label style={{ flex: 1, minWidth: 140 }}>
+            <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 4 }}>Max par semaine</div>
+            <input type="number" min="-1" value={remoteMaxPerWeek}
+              onChange={e => { setRemoteMaxPerWeek(parseInt(e.target.value) || -1); setSaved(false); }}
+              style={{ width: '100%', border: `1px solid ${C.border}`, borderRadius: 6, padding: '6px 8px', fontSize: 13 }} />
+          </label>
+          <label style={{ flex: 1, minWidth: 140 }}>
+            <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 4 }}>Max par mois</div>
+            <input type="number" min="-1" value={remoteMaxPerMonth}
+              onChange={e => { setRemoteMaxPerMonth(parseInt(e.target.value) || -1); setSaved(false); }}
+              style={{ width: '100%', border: `1px solid ${C.border}`, borderRadius: 6, padding: '6px 8px', fontSize: 13 }} />
+          </label>
+        </div>
+        {(remoteMaxPerWeek !== -1 || remoteMaxPerMonth !== -1) && (
+          <div style={{ fontSize: 12, color: '#7c3aed', marginTop: 8 }}>
+            {remoteMaxPerWeek !== -1 && <span>Max {remoteMaxPerWeek}j/semaine</span>}
+            {remoteMaxPerWeek !== -1 && remoteMaxPerMonth !== -1 && <span> · </span>}
+            {remoteMaxPerMonth !== -1 && <span>Max {remoteMaxPerMonth}j/mois</span>}
+          </div>
+        )}
+      </div>
+
       <div style={{ display:'flex', alignItems:'center', gap: 12, marginTop: 4 }}>
         <Btn onClick={save} disabled={saving}>Enregistrer</Btn>
         {saved && <span style={{ fontSize: 13, color: C.green, fontWeight: 500 }}>✓ Enregistré</span>}
       </div>
+
+      {/* Événements familiaux */}
+      <FamilyEventsSection token={token} />
+
+      {/* Report de jours non pris */}
+      <CarryoverSection token={token} settings={settings} onSaved={onSaved} />
 
       {/* RGPD */}
       <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, margin: '24px 0 8px', textTransform:'uppercase', letterSpacing:'.05em' }}>
         RGPD &amp; données personnelles
       </div>
       <RgpdAdminSection token={token} />
+    </div>
+  );
+}
+
+// ── Événements familiaux (Art. L3142-1) ────────────────────────────────────
+function FamilyEventsSection({ token }) {
+  const [events, setEvents] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [saved,  setSaved]  = useState(false);
+
+  useEffect(() => {
+    api('GET', '/family-events', null, token).then(setEvents).catch(() => {});
+  }, [token]);
+
+  if (!events) return null;
+
+  const update = (idx, field, val) => {
+    const next = events.map((e, i) => i === idx ? { ...e, [field]: val } : e);
+    setEvents(next);
+    setSaved(false);
+  };
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const updated = await api('PUT', '/family-events', { events }, token);
+      setEvents(updated);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (e) { alert(e.message); }
+    setSaving(false);
+  };
+
+  return (
+    <>
+      <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, margin: '24px 0 8px', textTransform:'uppercase', letterSpacing:'.05em' }}>
+        Événements familiaux (Art. L3142-1)
+      </div>
+      <div style={{ background: C.bgSecond, borderRadius: 10, padding: '14px', marginBottom: 12 }}>
+        <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 12 }}>
+          Jours légalement obligatoires. Ajustez selon votre convention collective.
+        </div>
+        {events.map((ev, i) => (
+          <div key={ev.event_key} style={{
+            display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8,
+            opacity: ev.active ? 1 : 0.45,
+          }}>
+            <input type="checkbox" checked={ev.active}
+              onChange={e => update(i, 'active', e.target.checked)}
+              style={{ flexShrink: 0 }} />
+            <input value={ev.label} onChange={e => update(i, 'label', e.target.value)}
+              style={{ flex: 1, border: `1px solid ${C.border}`, borderRadius: 6, padding: '5px 8px', fontSize: 13 }} />
+            <input type="number" min="0.5" step="0.5" value={ev.days}
+              onChange={e => update(i, 'days', parseFloat(e.target.value) || 0)}
+              style={{ width: 60, border: `1px solid ${C.border}`, borderRadius: 6, padding: '5px 8px', fontSize: 13, textAlign: 'right' }} />
+            <span style={{ fontSize: 12, color: C.textMuted, flexShrink: 0 }}>j</span>
+          </div>
+        ))}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12 }}>
+          <Btn onClick={save} disabled={saving}>Enregistrer</Btn>
+          {saved && <span style={{ fontSize: 13, color: C.green, fontWeight: 500 }}>✓ Enregistré</span>}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ── Report de jours non pris ────────────────────────────────────────────────
+function CarryoverSection({ token, settings, onSaved }) {
+  const [maxCarryover,     setMaxCarryover]     = useState(settings.cpCarryoverMax     ?? 0);
+  const [expiresMonths,    setExpiresMonths]    = useState(settings.cpCarryoverExpires ?? 12);
+  const [preview,          setPreview]          = useState(null);
+  const [loadingPreview,   setLoadingPreview]   = useState(false);
+  const [applying,         setApplying]         = useState(false);
+  const [applied,          setApplied]          = useState(null);
+  const [saving,           setSaving]           = useState(false);
+  const [saved,            setSaved]            = useState(false);
+
+  const saveCarryover = async () => {
+    setSaving(true);
+    try {
+      const data = await api('PUT', '/settings', {
+        ...settings,
+        cpCarryoverMax:     parseInt(maxCarryover),
+        cpCarryoverExpires: parseInt(expiresMonths),
+      }, token);
+      onSaved(data);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (e) { alert(e.message); }
+    setSaving(false);
+  };
+
+  const loadPreview = async () => {
+    setLoadingPreview(true);
+    try { setPreview(await api('GET', '/admin/carryover/preview', null, token)); }
+    catch (e) { alert(e.message); }
+    setLoadingPreview(false);
+  };
+
+  const applyCarryover = async () => {
+    if (!confirm('Appliquer le report ? Les soldes CP seront modifiés pour tous les employés.')) return;
+    setApplying(true);
+    try {
+      const r = await api('POST', '/admin/carryover/apply', {}, token);
+      setApplied(r.applied);
+      setPreview(null);
+    } catch (e) { alert(e.message); }
+    setApplying(false);
+  };
+
+  return (
+    <>
+      <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, margin: '24px 0 8px', textTransform:'uppercase', letterSpacing:'.05em' }}>
+        Report des CP non pris
+      </div>
+      <div style={{ background: C.bgSecond, borderRadius: 10, padding: '14px', marginBottom: 12 }}>
+        <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 12 }}>
+          Définit ce qui arrive aux jours non pris au 31 mai (ou 31 déc. si période civile). <strong>0</strong> = report désactivé, <strong>-1</strong> = tout reporter.
+        </div>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
+          <label style={{ flex: 1, minWidth: 140 }}>
+            <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 4 }}>Max jours reportés</div>
+            <input type="number" min="-1" value={maxCarryover}
+              onChange={e => { setMaxCarryover(parseInt(e.target.value) || 0); setSaved(false); }}
+              style={{ width: '100%', border: `1px solid ${C.border}`, borderRadius: 6, padding: '6px 8px', fontSize: 13 }} />
+          </label>
+          <label style={{ flex: 1, minWidth: 140 }}>
+            <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 4 }}>Expiration (mois)</div>
+            <input type="number" min="0" value={expiresMonths}
+              onChange={e => { setExpiresMonths(parseInt(e.target.value) || 0); setSaved(false); }}
+              style={{ width: '100%', border: `1px solid ${C.border}`, borderRadius: 6, padding: '6px 8px', fontSize: 13 }} />
+          </label>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <Btn onClick={saveCarryover} disabled={saving}>Enregistrer</Btn>
+          {saved && <span style={{ fontSize: 13, color: C.green, fontWeight: 500 }}>✓ Enregistré</span>}
+          {maxCarryover !== 0 && (
+            <Btn variant="ghost" onClick={loadPreview} disabled={loadingPreview}>
+              {loadingPreview ? '…' : 'Aperçu du report'}
+            </Btn>
+          )}
+        </div>
+
+        {preview && preview.enabled && preview.employees.length > 0 && (
+          <div style={{ marginTop: 14 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8 }}>
+              {preview.employees.length} salarié{preview.employees.length > 1 ? 's' : ''} avec des jours à reporter
+            </div>
+            {preview.employees.map(e => (
+              <div key={e.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '4px 0', borderBottom: `1px solid ${C.border}` }}>
+                <span>{e.firstname} {e.lastname}</span>
+                <span>{e.available.toFixed(1)}j dispo → <strong>{e.carryover.toFixed(1)}j reportés</strong></span>
+              </div>
+            ))}
+            <div style={{ marginTop: 12 }}>
+              <Btn onClick={applyCarryover} disabled={applying}>
+                {applying ? 'Application…' : 'Appliquer le report'}
+              </Btn>
+            </div>
+          </div>
+        )}
+        {preview && preview.enabled && preview.employees.length === 0 && (
+          <div style={{ fontSize: 12, color: C.textMuted, marginTop: 10 }}>Aucun salarié avec des jours à reporter.</div>
+        )}
+        {applied !== null && (
+          <div style={{ fontSize: 13, color: C.green, marginTop: 10, fontWeight: 500 }}>
+            ✓ Report appliqué pour {applied} salarié{applied > 1 ? 's' : ''}.
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+// ── Analytics ────────────────────────────────────────────────────────────────
+function AdminAnalytics({ token }) {
+  const [data,    setData]    = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api('GET', '/analytics', null, token).then(d => { setData(d); setLoading(false); }).catch(() => setLoading(false));
+  }, [token]);
+
+  if (loading) return <Spinner />;
+  if (!data)   return <div style={{ ...CARD, color: C.textMuted, textAlign:'center' }}>Erreur de chargement.</div>;
+
+  const typeLabels = { paid: 'Congés payés', rtt: 'RTT', unpaid: 'Sans solde', remote: 'Télétravail', event: 'Événement familial' };
+  const typeColors = { paid: C.blue, rtt: '#7c3aed', unpaid: C.amber, remote: '#0d9488', event: '#ec4899' };
+
+  const maxDays = Math.max(...(data.byMonth.map(m => parseFloat(m.total_days))), 1);
+  const months = (() => {
+    const result = [];
+    const now = new Date();
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      result.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    }
+    return result;
+  })();
+
+  return (
+    <div>
+      {/* KPIs */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+        <MetricCard label="Salariés"        value={data.balances.employee_count} />
+        <MetricCard label="Solde CP moyen"  value={`${data.balances.avg_cp_balance}j`} />
+        <MetricCard label="Solde RTT moyen" value={`${data.balances.avg_rtt_balance}j`} />
+        <MetricCard label="Types d'absences" value={data.byType.length} />
+      </div>
+
+      {/* Bar chart absences par mois */}
+      <div style={{ ...CARD, marginBottom: 12 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 14 }}>Absences par mois (12 derniers mois)</div>
+        <div style={{ display: 'flex', gap: 4, alignItems: 'flex-end', height: 120 }}>
+          {months.map(m => {
+            const row = data.byMonth.find(r => r.month === m);
+            const val = row ? parseFloat(row.total_days) : 0;
+            const pct = (val / maxDays) * 100;
+            const short = m.slice(5);
+            return (
+              <div key={m} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                <div style={{ fontSize: 10, color: C.textMuted }}>{val > 0 ? val.toFixed(0) : ''}</div>
+                <div style={{ width: '100%', height: `${Math.max(pct, val > 0 ? 4 : 0)}%`, background: C.blue, borderRadius: '3px 3px 0 0', minHeight: val > 0 ? 4 : 0 }} />
+                <div style={{ fontSize: 9, color: C.textMuted, whiteSpace: 'nowrap' }}>{short}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Répartition par type */}
+      {data.byType.length > 0 && (
+        <div style={{ ...CARD, marginBottom: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>Répartition par type (12 mois)</div>
+          {data.byType.map(t => {
+            const total = data.byType.reduce((s, x) => s + parseFloat(x.total_days), 0);
+            const pct = total ? Math.round(parseFloat(t.total_days) / total * 100) : 0;
+            return (
+              <div key={t.leave_type} style={{ marginBottom: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 3 }}>
+                  <span style={{ color: typeColors[t.leave_type] || C.text }}>{typeLabels[t.leave_type] || t.leave_type}</span>
+                  <span style={{ color: C.textMuted }}>{t.total_days}j · {pct}%</span>
+                </div>
+                <div style={{ height: 6, background: C.border, borderRadius: 3, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${pct}%`, background: typeColors[t.leave_type] || C.blue, borderRadius: 3 }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Par équipe */}
+      {data.byTeam.length > 0 && (
+        <div style={{ ...CARD, marginBottom: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>Absences par équipe (12 mois)</div>
+          {data.byTeam.map(t => (
+            <div key={t.team_name} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '5px 0', borderBottom: `1px solid ${C.border}` }}>
+              <span>{t.team_name}</span>
+              <span style={{ color: C.textMuted }}>{parseFloat(t.total_days).toFixed(1)}j · {t.nb_requests} demandes · {t.team_size} membres</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Employés avec CP restants > 10j */}
+      {data.expiring.length > 0 && (
+        <div style={{ ...CARD, marginBottom: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>⚠ CP élevés — risque fin de période</div>
+          <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 12 }}>
+            Salariés avec plus de 10j de CP restants — à surveiller avant la clôture de période.
+          </div>
+          {data.expiring.map((e, i) => (
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '5px 0', borderBottom: `1px solid ${C.border}` }}>
+              <span>{e.firstname} {e.lastname}</span>
+              <span style={{ color: C.amber, fontWeight: 600 }}>{(e.cp_balance - e.taken_paid).toFixed(1)}j</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -3194,6 +3813,34 @@ function TeamLeaderView({ teamData, token, onRefresh }) {
   );
 }
 
+function CalendarLink({ me }) {
+  const [copied, setCopied] = useState(false);
+  if (!me?.calendarToken) return null;
+  const url = `${window.location.origin}/api/calendar/${me.calendarToken}.ics`;
+  const copy = () => {
+    navigator.clipboard.writeText(url).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
+  };
+  return (
+    <div style={{ ...CARD, marginTop: 8 }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, marginBottom: 6 }}>
+        📅 Synchroniser mon calendrier
+      </div>
+      <div style={{ fontSize: 12, color: C.textHint, marginBottom: 10 }}>
+        Abonnez-vous à vos congés depuis Google Calendar, Outlook ou Apple Calendar.
+      </div>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <a href={`https://calendar.google.com/calendar/r?cid=${encodeURIComponent(url)}`}
+          target="_blank" rel="noopener noreferrer">
+          <Btn variant="ghost">Google Calendar</Btn>
+        </a>
+        <Btn variant="ghost" onClick={copy}>
+          {copied ? '✓ Copié !' : 'Copier le lien .ics'}
+        </Btn>
+      </div>
+    </div>
+  );
+}
+
 function EmpHome({ me, leaves, token }) {
   if (!me) return null;
   const todayStr = today();
@@ -3249,8 +3896,159 @@ function EmpHome({ me, leaves, token }) {
         </div>
       )}
 
+      <CalendarLink me={me} />
       <EmpExportButton token={token} />
     </>
+  );
+}
+
+// ── Import CSV des salariés ──────────────────────────────────────────────────
+const CSV_TEMPLATE_HEADER = 'firstname,lastname,email,password,entry_date,cp_balance,rtt_balance';
+const CSV_TEMPLATE_EXAMPLE = 'Marie,Dupont,marie.dupont@exemple.fr,MotDePasse1,2024-01-15,5,2\nJean,Martin,,MotDePasse2,,,';
+
+function parseCSV(text) {
+  const lines = text.trim().split('\n').map(l => l.replace(/\r$/, ''));
+  if (lines.length < 2) return null;
+  const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/\s+/g, '_'));
+  return lines.slice(1).map(line => {
+    const vals = line.split(',');
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = (vals[i] || '').trim(); });
+    return obj;
+  });
+}
+
+function ImportCsvModal({ token, onClose, onDone }) {
+  const [step, setStep]       = useState('upload'); // upload | preview | result
+  const [rows, setRows]       = useState([]);
+  const [parseErr, setParseErr] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [result, setResult]   = useState(null);
+  const fileRef = useRef();
+
+  const downloadTemplate = () => {
+    const content = CSV_TEMPLATE_HEADER + '\n' + CSV_TEMPLATE_EXAMPLE;
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = 'template-salaries.csv'; a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  const handleFile = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const parsed = parseCSV(ev.target.result);
+      if (!parsed || parsed.length === 0) {
+        setParseErr('Fichier invalide ou vide'); return;
+      }
+      setParseErr('');
+      setRows(parsed);
+      setStep('preview');
+    };
+    reader.readAsText(file, 'UTF-8');
+  };
+
+  const doImport = async () => {
+    setLoading(true);
+    try {
+      const data = await api('POST', '/users/import', { rows }, token);
+      setResult(data);
+      setStep('result');
+      if (data.created > 0) onDone();
+    } catch (e) { setParseErr(e.message); }
+    setLoading(false);
+  };
+
+  const COLS = ['firstname', 'lastname', 'email', 'password', 'entry_date', 'cp_balance', 'rtt_balance'];
+  const COL_LABELS = { firstname: 'Prénom', lastname: 'Nom', email: 'Email', password: 'Mot de passe', entry_date: 'Entrée', cp_balance: 'CP', rtt_balance: 'RTT' };
+
+  return (
+    <Modal title="Importer des salariés (CSV)" onClose={onClose}>
+      {step === 'upload' && (
+        <>
+          <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 8, padding: '12px 14px', marginBottom: 16, fontSize: 13, color: '#0369a1' }}>
+            <strong>Format attendu :</strong> fichier CSV avec les colonnes :<br />
+            <code style={{ fontSize: 11 }}>{CSV_TEMPLATE_HEADER}</code><br />
+            <span style={{ fontSize: 12, color: '#475569' }}>Seuls <em>prénom/nom</em> et <em>password</em> (≥ 8 car.) sont obligatoires. L'identifiant de connexion est généré automatiquement.</span>
+          </div>
+          <Btn variant="ghost" onClick={downloadTemplate} style={{ marginBottom: 12 }}>↓ Télécharger le modèle CSV</Btn>
+          <Field label="Sélectionner votre fichier CSV">
+            <input ref={fileRef} type="file" accept=".csv,text/csv" onChange={handleFile} style={{ fontSize: 13 }} />
+          </Field>
+          {parseErr && <Alert type="error">{parseErr}</Alert>}
+        </>
+      )}
+
+      {step === 'preview' && (
+        <>
+          <div style={{ fontSize: 13, color: '#475569', marginBottom: 10 }}>
+            <strong>{rows.length} salarié(s)</strong> détecté(s). Vérifiez avant d'importer.
+          </div>
+          <div style={{ overflowX: 'auto', marginBottom: 14 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr>{COLS.map(c => <th key={c} style={{ background: '#f8fafc', padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid #e2e8f0', whiteSpace: 'nowrap' }}>{COL_LABELS[c]}</th>)}</tr>
+              </thead>
+              <tbody>
+                {rows.slice(0, 10).map((r, i) => (
+                  <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                    {COLS.map(c => <td key={c} style={{ padding: '5px 8px', color: c === 'password' ? '#94a3b8' : '#334155' }}>{c === 'password' && r[c] ? '••••••••' : (r[c] || <span style={{ color: '#cbd5e1' }}>—</span>)}</td>)}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {rows.length > 10 && <div style={{ fontSize: 12, color: '#64748b', marginTop: 6 }}>… et {rows.length - 10} autre(s)</div>}
+          </div>
+          {parseErr && <Alert type="error">{parseErr}</Alert>}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Btn onClick={doImport} disabled={loading} full>{loading ? 'Import en cours…' : `Importer ${rows.length} salarié(s)`}</Btn>
+            <Btn variant="ghost" onClick={() => { setStep('upload'); setRows([]); if (fileRef.current) fileRef.current.value = ''; }} full>Annuler</Btn>
+          </div>
+        </>
+      )}
+
+      {step === 'result' && result && (
+        <>
+          <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '12px 14px', marginBottom: 12, fontSize: 13 }}>
+            <strong style={{ color: '#15803d' }}>✓ {result.created} salarié(s) importé(s) avec succès</strong>
+          </div>
+          {result.identifiers?.length > 0 && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 6 }}>Identifiants générés (à communiquer aux salariés) :</div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                  <thead><tr>
+                    <th style={{ background: '#f8fafc', padding: '5px 8px', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>Nom</th>
+                    <th style={{ background: '#f8fafc', padding: '5px 8px', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>Identifiant</th>
+                    <th style={{ background: '#f8fafc', padding: '5px 8px', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>Email</th>
+                  </tr></thead>
+                  <tbody>
+                    {result.identifiers.map((r, i) => (
+                      <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '4px 8px', color: '#334155' }}>{r.name}</td>
+                        <td style={{ padding: '4px 8px', fontFamily: 'monospace', fontWeight: 700, color: '#1d4ed8' }}>{r.identifier}</td>
+                        <td style={{ padding: '4px 8px', color: '#64748b' }}>{r.email || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+          {result.errors.length > 0 && (
+            <div style={{ background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: 8, padding: '10px 14px', marginBottom: 12, fontSize: 12 }}>
+              <strong style={{ color: '#be123c' }}>{result.errors.length} erreur(s) :</strong>
+              <ul style={{ paddingLeft: 16, marginTop: 6 }}>
+                {result.errors.map((e, i) => <li key={i}>Ligne {e.line}{e.name ? ` (${e.name})` : ''} : {e.error}</li>)}
+              </ul>
+            </div>
+          )}
+          <Btn onClick={onClose} full>Fermer</Btn>
+        </>
+      )}
+    </Modal>
   );
 }
 
@@ -3303,46 +4101,74 @@ function EmpExportButton({ token }) {
 }
 
 function EmpRequest({ me, org, token, onDone }) {
-  const [start, setStart]         = useState('');
-  const [end, setEnd]             = useState('');
-  const [period, setPeriod]       = useState('full'); // 'full' | 'am' | 'pm'
-  const [comment, setComment]     = useState('');
-  const [leaveType, setLeaveType] = useState('paid');
-  const [err, setErr]             = useState('');
-  const [done, setDone]           = useState(false);
-  const [saving, setSaving]       = useState(false);
+  const [start, setStart]           = useState('');
+  const [end, setEnd]               = useState('');
+  const [period, setPeriod]         = useState('full'); // 'full' | 'am' | 'pm'
+  const [comment, setComment]       = useState('');
+  const [leaveType, setLeaveType]   = useState('paid');
+  const [eventKey, setEventKey]     = useState('');
+  const [familyEvents, setFamilyEvents] = useState([]);
+  const [err, setErr]               = useState('');
+  const [done, setDone]             = useState(false);
+  const [saving, setSaving]         = useState(false);
+
+  useEffect(() => {
+    api('GET', '/family-events', null, token).then(evs => setFamilyEvents(evs.filter(e => e.active))).catch(() => {});
+  }, [token]);
 
   if (!me) return null;
   const accrued     = parseFloat(me.accrued_cp ?? 0) + parseFloat(me.cp_balance || 0);
   const remCP       = accrued - (me.taken_days || 0);
   const remRTT      = parseFloat(me.rtt_balance || 0) - (me.taken_rtt_days || 0);
   const isSingleDay = start && end && start === end;
-  const fullDays    = start && end && end >= start ? workDays(start, end) : 0;
-  const days        = isSingleDay && period !== 'full' ? 0.5 : fullDays;
+
+  // Pour les événements familiaux, les jours sont imposés par le type d'événement
+  const selectedEvent = familyEvents.find(e => e.event_key === eventKey);
+  const fullDays    = start && end && end >= start ? workDays(start, end, org?.dayCountType) : 0;
+  const days        = leaveType === 'event' && selectedEvent
+    ? parseFloat(selectedEvent.days)
+    : isSingleDay && period !== 'full' ? 0.5 : fullDays;
+
   const canUnpaid   = org?.allowUnpaidLeave;
   const canRTT      = remRTT > 0;
 
   // Types disponibles
   const leaveTypes = [
-    { id: 'paid',   label: '💰 Congé payé',  balance: remCP,  show: true },
-    { id: 'rtt',    label: '⏱ RTT',          balance: remRTT, show: canRTT },
-    { id: 'unpaid', label: '📋 Sans solde',   balance: null,   show: canUnpaid },
+    { id: 'paid',   label: '💰 Congé payé',        balance: remCP,  show: true },
+    { id: 'rtt',    label: '⏱ RTT',                balance: remRTT, show: canRTT },
+    { id: 'unpaid', label: '📋 Sans solde',         balance: null,   show: canUnpaid },
+    { id: 'remote', label: '🏠 Télétravail',        balance: null,   show: true },
+    { id: 'event',  label: '🎗 Événement familial', balance: null,   show: familyEvents.length > 0 },
   ].filter(t => t.show);
 
   const currentType = leaveTypes.find(t => t.id === leaveType) || leaveTypes[0];
 
   const submit = async () => {
-    if (!start || !end) return setErr('Sélectionnez les deux dates.');
-    if (end < start) return setErr('La date de fin doit être après le début.');
-    if (days === 0) return setErr('Aucun jour ouvré sur cette période.');
+    if (leaveType === 'event') {
+      if (!eventKey) return setErr('Sélectionnez un événement familial.');
+      if (!start) return setErr('Sélectionnez la date de début.');
+    } else {
+      if (!start || !end) return setErr('Sélectionnez les deux dates.');
+      if (end < start) return setErr('La date de fin doit être après le début.');
+      if (days === 0) return setErr(`Aucun jour ${org?.dayCountType === 'ouvrable' ? 'ouvrable' : 'ouvré'} sur cette période.`);
+    }
     if (leaveType === 'paid' && days > remCP)
       return setErr(`Solde CP insuffisant (${remCP.toFixed(1)}j restants).`);
     if (leaveType === 'rtt' && days > remRTT)
       return setErr(`Solde RTT insuffisant (${remRTT.toFixed(1)}j restants).`);
     setSaving(true); setErr('');
+    // Pour les événements familiaux : end = start + jours de l'événement (ouvrés)
+    let effectiveEnd = end;
+    if (leaveType === 'event' && selectedEvent && start) {
+      effectiveEnd = start; // Le backend calculera
+    }
     try {
-      await api('POST', '/leaves', { startDate: start, endDate: end, days, comment, leaveType, period }, token);
-      setDone(true); setStart(''); setEnd(''); setComment(''); setLeaveType('paid'); setPeriod('full');
+      await api('POST', '/leaves', {
+        startDate: start, endDate: effectiveEnd || start,
+        days, comment, leaveType, period,
+        ...(leaveType === 'event' ? { eventKey } : {}),
+      }, token);
+      setDone(true); setStart(''); setEnd(''); setComment(''); setLeaveType('paid'); setPeriod('full'); setEventKey('');
       onDone();
     } catch (e) { setErr(e.message); }
     setSaving(false);
@@ -3391,6 +4217,21 @@ function EmpRequest({ me, org, token, onDone }) {
       }}>
         {leaveType === 'unpaid' ? (
           <span style={{ color: C.amber }}>Sans solde — non décompté de votre solde CP</span>
+        ) : leaveType === 'remote' ? (
+          <span style={{ color: '#7c3aed' }}>
+            Télétravail — non décompté de vos congés
+            {(org?.remoteMaxPerWeek !== -1 || org?.remoteMaxPerMonth !== -1) && (
+              <span style={{ display:'block', fontSize: 12, marginTop: 2, opacity: 0.85 }}>
+                {org?.remoteMaxPerWeek  !== -1 && <span>Max {org.remoteMaxPerWeek}j/semaine</span>}
+                {org?.remoteMaxPerWeek  !== -1 && org?.remoteMaxPerMonth !== -1 && <span> · </span>}
+                {org?.remoteMaxPerMonth !== -1 && <span>Max {org.remoteMaxPerMonth}j/mois</span>}
+              </span>
+            )}
+          </span>
+        ) : leaveType === 'event' ? (
+          <span style={{ color: '#ec4899' }}>
+            Événement familial (Art. L3142-1) — non décompté de vos CP
+          </span>
         ) : (
           <>Solde {leaveType === 'rtt' ? 'RTT' : 'CP'} disponible :
             <strong style={{ color: currentType.balance <= 3 ? C.red : C.text, marginLeft: 4 }}>
@@ -3400,17 +4241,40 @@ function EmpRequest({ me, org, token, onDone }) {
         )}
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap: 10, marginBottom: 12 }}>
+      {leaveType === 'event' && (
+        <div style={{ marginBottom: 12 }}>
+          <Field label="Type d'événement">
+            <select value={eventKey} onChange={e => { setEventKey(e.target.value); setErr(''); }}
+              style={{ width: '100%' }}>
+              <option value="">— Sélectionnez —</option>
+              {familyEvents.map(ev => (
+                <option key={ev.event_key} value={ev.event_key}>
+                  {ev.label} ({ev.days}j)
+                </option>
+              ))}
+            </select>
+          </Field>
+          {selectedEvent && (
+            <div style={{ fontSize: 12, color: '#ec4899', marginTop: 4 }}>
+              {selectedEvent.days} jour{selectedEvent.days > 1 ? 's' : ''} légalement dus — non décomptés de vos CP
+            </div>
+          )}
+        </div>
+      )}
+
+      <div style={{ display:'grid', gridTemplateColumns: leaveType === 'event' ? '1fr' : '1fr 1fr', gap: 10, marginBottom: 12 }}>
         <Field label="Date de début">
           <input type="date" value={start} min={today()}
             onChange={e => { setStart(e.target.value); setErr(''); if (e.target.value !== end) setPeriod('full'); }}
             style={{ width:'100%' }} />
         </Field>
-        <Field label="Date de fin">
-          <input type="date" value={end} min={start || today()}
-            onChange={e => { setEnd(e.target.value); setErr(''); if (start !== e.target.value) setPeriod('full'); }}
-            style={{ width:'100%' }} />
-        </Field>
+        {leaveType !== 'event' && (
+          <Field label="Date de fin">
+            <input type="date" value={end} min={start || today()}
+              onChange={e => { setEnd(e.target.value); setErr(''); if (start !== e.target.value) setPeriod('full'); }}
+              style={{ width:'100%' }} />
+          </Field>
+        )}
       </div>
 
       {isSingleDay && (
@@ -3441,7 +4305,9 @@ function EmpRequest({ me, org, token, onDone }) {
           background: C.blueLight, borderRadius: 8,
           fontSize: 13, color: C.blueDark, fontWeight: 500,
         }}>
-          {days === 0.5 ? '½ journée' : `${days} jour${days > 1 ? 's' : ''} ouvré${days > 1 ? 's' : ''}`}
+          {days === 0.5
+            ? `½ journée${leaveType === 'remote' ? ' de télétravail' : ''}`
+            : `${days} jour${days > 1 ? 's' : ''} ${leaveType === 'remote' ? 'de télétravail' : 'ouvré' + (days > 1 ? 's' : '')}`}
           {period === 'am' ? ' — matin' : period === 'pm' ? ' — après-midi' : ''}
         </div>
       )}
@@ -3540,7 +4406,7 @@ function useIdleTimer(onLogout, active) {
 // ── App root ───────────────────────────────────────────────────────────────
 export default function App() {
   const [session, setSession] = useState(() => loadSession());
-  const [screen, setScreen]   = useState('landing'); // 'landing' | 'login' | 'register' | 'privacy'
+  const [screen, setScreen]   = useState('landing'); // 'landing' | 'login' | 'register' | 'privacy' | 'mentions'
   const prevScreenRef = useRef('landing');
   const resetToken = new URLSearchParams(window.location.search).get('token');
 
@@ -3567,13 +4433,15 @@ export default function App() {
     setSession(null);
   }} />;
 
-  const goPrivacy = (from) => { prevScreenRef.current = from; setScreen('privacy'); };
+  const goPrivacy  = (from) => { prevScreenRef.current = from; setScreen('privacy'); };
+  const goMentions = (from) => { prevScreenRef.current = from; setScreen('mentions'); };
 
   if (!session) {
-    if (screen === 'privacy')  return <PrivacyPage onBack={() => setScreen(prevScreenRef.current)} />;
+    if (screen === 'privacy')  return <PrivacyPage onBack={() => setScreen(prevScreenRef.current)} onMentions={() => goMentions('privacy')} />;
+    if (screen === 'mentions') return <MentionsLegalesPage onBack={() => setScreen(prevScreenRef.current)} onPrivacy={() => goPrivacy('mentions')} />;
     if (screen === 'login')    return <LoginScreen    onLogin={handleLogin} onBack={() => setScreen('landing')} onRegister={() => setScreen('register')} />;
     if (screen === 'register') return <RegisterScreen onBack={() => setScreen('login')} onPrivacy={() => goPrivacy('register')} />;
-    return <LandingPage onLogin={() => setScreen('login')} onRegister={() => setScreen('register')} onPrivacy={() => goPrivacy('landing')} />;
+    return <LandingPage onLogin={() => setScreen('login')} onRegister={() => setScreen('register')} onPrivacy={() => goPrivacy('landing')} onMentions={() => goMentions('landing')} />;
   }
 
   const role = session.user.role;

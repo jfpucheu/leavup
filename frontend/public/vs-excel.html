@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pourquoi abandonner Excel pour gérer les congés ? — Leavup</title>
+  <meta name="description" content="Excel pour gérer les congés : erreurs de calcul, risques légaux, perte de temps. Découvrez pourquoi les PME passent à un logiciel dédié comme Leavup, gratuit jusqu'à 10 utilisateurs." />
+  <link rel="canonical" href="https://leavup.com/vs-excel" />
+  <meta name="robots" content="index, follow" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://leavup.com/vs-excel" />
+  <meta property="og:title" content="Excel vs logiciel de congés — Leavup" />
+  <meta property="og:description" content="Erreurs de calcul, non-conformité légale, perte de temps : les vraies limites d'Excel pour gérer les absences de votre équipe." />
+  <meta property="og:image" content="https://leavup.com/og-image.png" />
+  <meta property="og:locale" content="fr_FR" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Accueil", "item": "https://leavup.com/" },
+      { "@type": "ListItem", "position": 2, "name": "Excel vs logiciel", "item": "https://leavup.com/vs-excel" }
+    ]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      { "@type": "Question", "name": "Excel peut-il gérer les jours fériés automatiquement ?", "acceptedAnswer": { "@type": "Answer", "text": "Non. Excel ne connaît pas les jours fériés français ni les règles de calcul de Pâques (mobile). Vous devez les saisir manuellement chaque année et risquez des erreurs sur l'Ascension, Pentecôte ou le Lundi de Pâques." } },
+      { "@type": "Question", "name": "Quels sont les risques légaux à gérer les congés sur Excel ?", "acceptedAnswer": { "@type": "Answer", "text": "Des erreurs de calcul peuvent entraîner des sous-estimations de solde, des fractionnements non appliqués (Art. L3141-19) ou de mauvaises conversions jours ouvrés/ouvrables. L'employeur reste responsable légalement même en cas d'erreur de tableur." } },
+      { "@type": "Question", "name": "Combien de temps perd-on à gérer les congés sur Excel ?", "acceptedAnswer": { "@type": "Answer", "text": "En moyenne 20 à 45 minutes par semaine pour une PME de 15 personnes : saisie des demandes, vérification des soldes, envoi d'emails de confirmation, mise à jour du planning. Soit 25 à 40 heures par an." } }
+    ]
+  }
+  </script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #fff; color: #0f172a; line-height: 1.6; }
+    a { color: #0ea5e9; text-decoration: none; }
+    .grad { background: linear-gradient(160deg, #0f172a 0%, #1e3a8a 60%, #0ea5e9 100%); }
+    nav { padding: 0 24px; height: 60px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+    .logo { font-size: 22px; font-weight: 800; color: white; letter-spacing: -0.04em; }
+    .logo span { color: #38bdf8; }
+    .nav-links { display: flex; gap: 20px; align-items: center; }
+    .nav-link { color: rgba(255,255,255,0.75); font-size: 13px; font-weight: 500; }
+    .nav-cta { background: #0ea5e9; color: white; border-radius: 8px; padding: 8px 18px; font-size: 13px; font-weight: 700; text-decoration: none; }
+    .nav-login { color: rgba(255,255,255,0.85); font-size: 13px; font-weight: 600; text-decoration: none; padding: 8px 14px; border: 1px solid rgba(255,255,255,0.25); border-radius: 8px; }
+    .nav-login:hover { background: rgba(255,255,255,0.1); color: white; }
+    .hero { padding: 64px 24px 56px; text-align: center;; max-width: none; margin: 0; }
+    .hero-badge { display: inline-block; background: rgba(239,68,68,0.2); border: 1px solid rgba(239,68,68,0.4); border-radius: 20px; color: #fca5a5; font-size: 12px; font-weight: 700; padding: 5px 14px; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 0.05em; }
+    h1 { font-size: 36px; font-weight: 800; color: white; letter-spacing: -0.04em; max-width: 640px; margin: 0 auto 16px; line-height: 1.2; }
+    .hero-sub { font-size: 16px; color: rgba(255,255,255,0.72); max-width: 500px; margin: 0 auto; }
+    .wrap { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+    section { padding: 56px 0; }
+    section.alt { background: #f8fafc; }
+    h2 { font-size: 24px; font-weight: 800; color: #0f172a; margin-bottom: 12px; letter-spacing: -0.03em; }
+    .section-sub { font-size: 14px; color: #64748b; margin-bottom: 36px; }
+    /* Comparison table */
+    .cmp { width: 100%; border-collapse: collapse; font-size: 13px; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .cmp thead tr { background: linear-gradient(135deg, #0f172a, #1d4ed8); color: white; }
+    .cmp th { padding: 14px 20px; text-align: left; font-weight: 700; font-size: 14px; }
+    .cmp th:not(:first-child) { text-align: center; }
+    .cmp td { padding: 13px 20px; border-bottom: 1px solid #f1f5f9; color: #334155; font-size: 13px; }
+    .cmp td:not(:first-child) { text-align: center; }
+    .cmp tr:last-child td { border-bottom: none; }
+    .cmp tr:nth-child(even) td { background: #f8fafc; }
+    .bad  { color: #ef4444; font-weight: 600; }
+    .good { color: #22c55e; font-weight: 600; }
+    /* Pain points */
+    .pains { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-top: 8px; }
+    .pain-card { background: white; border-radius: 14px; padding: 24px; border: 1px solid #e2e8f0; border-left: 4px solid #ef4444; }
+    .pain-card.warn { border-left-color: #f59e0b; }
+    .pain-icon { font-size: 28px; margin-bottom: 10px; }
+    .pain-title { font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 8px; }
+    .pain-desc { font-size: 13px; color: #475569; line-height: 1.65; }
+    /* Time calc */
+    .time-box { background: linear-gradient(135deg, #0f172a, #1e3a8a); border-radius: 16px; padding: 36px; color: white; display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; text-align: center; margin-top: 8px; }
+    .time-val { font-size: 40px; font-weight: 800; color: #38bdf8; letter-spacing: -0.04em; }
+    .time-label { font-size: 13px; color: rgba(255,255,255,0.65); margin-top: 6px; }
+    /* FAQ */
+    .faq-item { border-bottom: 1px solid #e2e8f0; padding: 20px 0; }
+    .faq-q { font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 8px; }
+    .faq-a { font-size: 14px; color: #475569; }
+    /* CTA */
+    .cta-box { background: linear-gradient(135deg, #0f172a, #1d4ed8); border-radius: 20px; padding: 56px 40px; text-align: center; }
+    .cta-box h2 { color: white; margin-bottom: 12px; }
+    .cta-box p { color: rgba(255,255,255,0.7); font-size: 15px; margin-bottom: 28px; }
+    .btn-primary { background: #0ea5e9; color: white; border-radius: 10px; padding: 14px 32px; font-size: 15px; font-weight: 700; text-decoration: none; display: inline-block; box-shadow: 0 4px 16px rgba(14,165,233,0.4); }
+    footer { background: #0f172a; padding: 28px 24px; text-align: center; }
+    .footer-logo { font-size: 18px; font-weight: 800; color: white; letter-spacing: -0.03em; }
+    .footer-logo span { color: #38bdf8; }
+    footer p { font-size: 12px; color: rgba(255,255,255,0.35); margin-top: 8px; }
+    footer a { color: rgba(255,255,255,0.45); font-size: 11px; text-decoration: underline; margin: 0 8px; }
+    @media (max-width: 700px) {
+      h1 { font-size: 26px; }
+      .time-box { grid-template-columns: 1fr; }
+      .cmp th, .cmp td { padding: 10px 12px; }
+    }
+
+    @media (max-width: 640px) {
+      .nav-link { display: none; }
+      .nav-links { gap: 8px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="grad">
+    <a href="/" class="logo">Leav<span>up</span></a>
+    <div class="nav-links">
+      <a href="/fonctionnalites" class="nav-link">Fonctionnalités</a>
+      <a href="/tarifs" class="nav-link">Tarifs</a>
+      <a href="/comparatif" class="nav-link">Comparatif</a>
+      <a href="/vs-excel" class="nav-link">vs Excel</a>
+      <a href="/guide-conges-payes" class="nav-link">Guide légal</a>
+      <a href="/" class="nav-login">Se connecter</a>
+      <a href="/" class="nav-cta">Essai gratuit</a>
+    </div>
+  </nav>
+
+  <section class="hero grad">
+    <div class="hero-badge">⚠ Excel n'est pas fait pour ça</div>
+    <h1>Pourquoi Excel est un mauvais choix pour gérer les congés de votre équipe</h1>
+    <p class="hero-sub">Erreurs de calcul, risques légaux, perte de temps — les PME qui gèrent leurs absences sur tableur prennent des risques qu'elles ignorent souvent.</p>
+  </section>
+
+  <div style="padding: 56px 0;">
+  <div class="wrap">
+
+    <!-- Points de douleur -->
+    <h2>Les 6 problèmes concrets d'Excel</h2>
+    <p class="section-sub">Nous avons interrogé des RH de PME. Voici ce qui revient systématiquement.</p>
+    <div class="pains">
+      <div class="pain-card">
+        <div class="pain-icon">📅</div>
+        <div class="pain-title">Les jours fériés ne se calculent pas tout seuls</div>
+        <p class="pain-desc">Pâques, l'Ascension et la Pentecôte sont des dates mobiles. Excel ne les connaît pas. Chaque année, il faut les ressaisir manuellement — et une erreur suffit à invalider tous les soldes.</p>
+      </div>
+      <div class="pain-card">
+        <div class="pain-icon">⚖️</div>
+        <div class="pain-title">Le fractionnement légal est ignoré</div>
+        <p class="pain-desc">L'article L3141-19 du Code du travail prévoit des jours bonus si les salariés posent des congés hors période principale. Aucun tableur ne calcule ça automatiquement — et l'employeur reste responsable.</p>
+      </div>
+      <div class="pain-card warn">
+        <div class="pain-icon">🔄</div>
+        <div class="pain-title">La formule jours ouvrés/ouvrables est source d'erreurs</div>
+        <p class="pain-desc">25 jours ouvrés ≠ 30 jours ouvrables. La conversion dépend du samedi. Une case cochée de travers dans un NETWORKDAYS et le solde est faux pour toute l'année.</p>
+      </div>
+      <div class="pain-card warn">
+        <div class="pain-icon">📧</div>
+        <div class="pain-title">Zéro traçabilité des demandes</div>
+        <p class="pain-desc">Qui a demandé quoi, quand, et qui a validé ? Sur Excel, ça finit en email perdu dans une boîte mail ou en post-it. En cas de litige prud'homal, vous n'avez aucune preuve.</p>
+      </div>
+      <div class="pain-card">
+        <div class="pain-icon">👥</div>
+        <div class="pain-title">Impossible de déléguer sans risquer des erreurs</div>
+        <p class="pain-desc">Si vous partez en vacances, quelqu'un doit gérer le fichier. Un écrasement de cellule, une mauvaise formule copiée — et tout est à recommencer. Le fichier Excel n'a pas de rôles ni de droits.</p>
+      </div>
+      <div class="pain-card">
+        <div class="pain-icon">📱</div>
+        <div class="pain-title">Inaccessible pour les salariés</div>
+        <p class="pain-desc">Le salarié ne peut pas consulter son solde depuis son téléphone, ni poser une demande à 20h le dimanche soir. Il doit attendre lundi matin pour envoyer un email au RH.</p>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <div class="alt" style="padding: 56px 0;">
+  <div class="wrap">
+    <h2>Combien de temps ça vous coûte vraiment ?</h2>
+    <p class="section-sub">Estimation pour une PME de 15 salariés gérant les congés sur Excel.</p>
+    <div class="time-box">
+      <div>
+        <div class="time-val">30 min</div>
+        <div class="time-label">par semaine pour gérer les demandes, vérifier les soldes et envoyer les confirmations</div>
+      </div>
+      <div>
+        <div class="time-val">26 h</div>
+        <div class="time-label">par an perdues en saisie, mise à jour et corrections d'erreurs</div>
+      </div>
+      <div>
+        <div class="time-val">~900 €</div>
+        <div class="time-label">de coût salarial annuel rien que pour la gestion administrative des congés</div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <div style="padding: 56px 0;">
+  <div class="wrap">
+    <h2>Comparaison détaillée : Excel vs Leavup</h2>
+    <p class="section-sub">Ce que vous gagnez en passant à un outil dédié.</p>
+    <table class="cmp">
+      <thead>
+        <tr>
+          <th>Critère</th>
+          <th>Excel / Google Sheets</th>
+          <th>Leavup</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Jours fériés automatiques</td><td class="bad">❌ Saisie manuelle chaque année</td><td class="good">✓ 11 fériés + Pâques mobile</td></tr>
+        <tr><td>Calcul jours ouvrés / ouvrables</td><td class="bad">❌ Formule à configurer, source d'erreurs</td><td class="good">✓ Automatique selon paramètre org</td></tr>
+        <tr><td>Fractionnement légal (L3141-19)</td><td class="bad">❌ Non géré</td><td class="good">✓ Calcul et alerte automatiques</td></tr>
+        <tr><td>Demande en ligne par le salarié</td><td class="bad">❌ Email ou formulaire papier</td><td class="good">✓ Interface web, mobile inclus</td></tr>
+        <tr><td>Validation par le manager</td><td class="bad">❌ Email + mise à jour manuelle</td><td class="good">✓ Un clic, notification auto</td></tr>
+        <tr><td>Traçabilité des demandes</td><td class="bad">❌ Aucune</td><td class="good">✓ Historique complet horodaté</td></tr>
+        <tr><td>Délégation à un chef d'équipe</td><td class="bad">❌ Risque d'écrasement du fichier</td><td class="good">✓ Rôles et droits séparés</td></tr>
+        <tr><td>Planning visuel partagé</td><td class="bad">❌ Pas en temps réel</td><td class="good">✓ Calendrier mis à jour instantanément</td></tr>
+        <tr><td>Synchronisation agenda</td><td class="bad">❌ Export manuel</td><td class="good">✓ Abonnement .ics (Google / Outlook)</td></tr>
+        <tr><td>Télétravail</td><td class="bad">❌ Un autre onglet à gérer</td><td class="good">✓ Intégré au même outil</td></tr>
+        <tr><td>Conformité RGPD</td><td class="bad">❌ Fichier non sécurisé</td><td class="good">✓ Chiffrement AES-256, hébergé FR</td></tr>
+        <tr><td>Coût (équipe de 10)</td><td class="good">✓ Gratuit</td><td class="good">✓ Gratuit aussi</td></tr>
+        <tr><td>Coût (équipe de 20)</td><td class="good">✓ Gratuit</td><td><strong>39 €/mois</strong> — soit 1,95 €/personne</td></tr>
+      </tbody>
+    </table>
+  </div>
+  </div>
+
+  <div class="alt" style="padding: 56px 0;">
+  <div class="wrap">
+    <h2>Questions fréquentes</h2>
+    <div class="faq-item">
+      <div class="faq-q">Excel peut-il gérer les jours fériés automatiquement ?</div>
+      <p class="faq-a">Non. Excel ne connaît pas les jours fériés français ni les règles de calcul de Pâques (date mobile). La fonction NETWORKDAYS permet d'exclure des jours, mais vous devez les lister manuellement chaque année. Un oubli sur l'Ascension ou Pentecôte et tous les soldes sont faux.</p>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Quels sont les risques légaux à gérer les congés sur Excel ?</div>
+      <p class="faq-a">L'employeur est légalement responsable du décompte exact des congés payés. Des erreurs de calcul peuvent conduire à des rappels de salaire (jours mal décomptés), à des contentieux prud'homaux, ou à des redressements URSSAF si les congés sont liés à des éléments de paie. Le fractionnement non appliqué (Art. L3141-19) est fréquemment contesté.</p>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Combien de temps perd-on à gérer les congés sur Excel ?</div>
+      <p class="faq-a">En moyenne 20 à 45 minutes par semaine pour une PME de 15 personnes : saisie des demandes reçues par email, vérification des soldes, envoi des confirmations, mise à jour du planning. Soit 25 à 40 heures par an — l'équivalent d'une semaine de travail d'un salarié.</p>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Peut-on migrer depuis Excel vers Leavup facilement ?</div>
+      <p class="faq-a">Oui. Leavup permet d'importer les salariés et leurs soldes actuels. La migration prend généralement moins d'une heure pour une PME de 20 personnes. Vos données Excel (soldes CP, RTT, historique) peuvent être ressaisies ou importées par l'administrateur.</p>
+    </div>
+  </div>
+  </div>
+
+  <div style="padding: 56px 0;">
+  <div class="wrap">
+    <div class="cta-box">
+      <h2>Passez à Leavup — gratuit jusqu'à 10 utilisateurs</h2>
+      <p>Zéro configuration complexe. Vos salariés reçoivent une invitation par email et peuvent poser leurs congés le jour même.</p>
+      <a href="/" class="btn-primary">Créer mon organisation gratuitement →</a>
+    </div>
+  </div>
+  </div>
+
+  <footer>
+    <div class="footer-logo">Leav<span>up</span></div>
+    <p style="margin-top:10px;display:flex;flex-wrap:wrap;justify-content:center;gap:6px 20px;">
+      <a href="/">Accueil</a>
+      <a href="/fonctionnalites">Fonctionnalités</a>
+      <a href="/tarifs">Tarifs</a>
+      <a href="/comparatif">Comparatif</a>
+      <a href="/vs-excel">vs Excel</a>
+      <a href="/guide-conges-payes">Guide légal</a>
+      <a href="/mentions-legales">Mentions légales</a>
+      <a href="/privacy">Confidentialité</a>
+    </p>
+    <p>© 2026 Leavup — Logiciel de gestion des congés pour PME françaises</p>
+  </footer>
+
+</body>
+</html>

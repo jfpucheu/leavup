@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tarifs — Leavup, logiciel de gestion des congés gratuit pour PME</title>
+  <meta name="description" content="Leavup est gratuit jusqu'à 10 utilisateurs, sans limite de durée. Plan Teams à 39 €/mois pour les équipes jusqu'à 30 personnes. Aucune carte bancaire requise pour commencer." />
+  <link rel="canonical" href="https://leavup.com/tarifs" />
+  <meta name="robots" content="index, follow" />
+  <meta property="og:type"        content="website" />
+  <meta property="og:url"         content="https://leavup.com/tarifs" />
+  <meta property="og:title"       content="Tarifs Leavup — Gratuit jusqu'à 10 utilisateurs" />
+  <meta property="og:description" content="Plan Starter gratuit pour toujours, Plan Teams à 39 €/mois. Gestion des congés et absences pour PME françaises." />
+  <meta property="og:image"       content="https://leavup.com/og-image.png" />
+  <meta property="og:locale"      content="fr_FR" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Accueil", "item": "https://leavup.com/" },
+      { "@type": "ListItem", "position": 2, "name": "Tarifs", "item": "https://leavup.com/tarifs" }
+    ]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Leavup est-il vraiment gratuit ?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Oui, le plan Starter est gratuit pour toujours pour 1 administrateur et jusqu'à 9 employés (10 utilisateurs au total). Aucune carte bancaire requise." }
+      },
+      {
+        "@type": "Question",
+        "name": "Que se passe-t-il si mon équipe dépasse 10 utilisateurs ?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Vous pouvez passer au plan Teams (jusqu'à 30 utilisateurs, 39 €/mois HT), au plan Business (jusqu'à 50 utilisateurs, 49 €/mois HT) ou au plan Enterprise (50+ utilisateurs, sur devis). Vous serez prévenu avant d'atteindre la limite." }
+      },
+      {
+        "@type": "Question",
+        "name": "Puis-je annuler à tout moment ?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Oui, sans engagement. Vous pouvez rétrograder au plan gratuit ou supprimer votre compte à tout moment depuis les paramètres." }
+      },
+      {
+        "@type": "Question",
+        "name": "Y a-t-il une réduction pour la facturation annuelle ?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Oui, le plan Teams revient à 31 €/mois HT avec une facturation annuelle, soit une économie de 20 % par rapport à la facturation mensuelle." }
+      }
+    ]
+  }
+  </script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #fff; color: #0f172a; line-height: 1.6; }
+    a { color: #0ea5e9; text-decoration: none; }
+    .grad { background: linear-gradient(160deg, #0f172a 0%, #1e3a8a 60%, #0ea5e9 100%); }
+    nav { padding: 0 24px; height: 60px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+    .logo { font-size: 22px; font-weight: 800; color: white; letter-spacing: -0.04em; }
+    .logo span { color: #38bdf8; }
+    .nav-links { display: flex; gap: 20px; align-items: center; }
+    .nav-link { color: rgba(255,255,255,0.75); font-size: 13px; font-weight: 500; }
+    .nav-cta { background: #0ea5e9; color: white; border-radius: 8px; padding: 8px 18px; font-size: 13px; font-weight: 700; text-decoration: none; display: inline-block; }
+    .nav-login { color: rgba(255,255,255,0.85); font-size: 13px; font-weight: 600; text-decoration: none; padding: 8px 14px; border: 1px solid rgba(255,255,255,0.25); border-radius: 8px; }
+    .nav-login:hover { background: rgba(255,255,255,0.1); color: white; }
+    .hero { padding: 64px 24px 56px; text-align: center;; max-width: none; margin: 0; }
+    h1 { font-size: 36px; font-weight: 800; color: white; letter-spacing: -0.04em; max-width: 600px; margin: 0 auto 16px; line-height: 1.2; }
+    .hero-sub { font-size: 16px; color: rgba(255,255,255,0.72); max-width: 460px; margin: 0 auto; }
+    .pricing-section { padding: 64px 24px; max-width: 1000px; margin: 0 auto; }
+    .pricing-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 64px; }
+    .plan { background: white; border-radius: 20px; padding: 36px 28px; border: 2px solid #e2e8f0; position: relative; }
+    .plan-pro { background: linear-gradient(135deg,#0f172a,#1d4ed8); border: none; }
+    .plan-dark { background: #0f172a; border: none; }
+    .plan-badge { position: absolute; top: 16px; right: 16px; background: #0ea5e9; border-radius: 20px; padding: 3px 12px; font-size: 11px; font-weight: 700; color: white; }
+    .plan-name { font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .plan-pro .plan-name, .plan-dark .plan-name { color: rgba(255,255,255,0.5); }
+    .plan-audience { font-size: 13px; font-weight: 600; color: #0ea5e9; margin-bottom: 16px; }
+    .plan-pro .plan-audience, .plan-dark .plan-audience { color: #7dd3fc; }
+    .plan-price { font-size: 44px; font-weight: 800; color: #0f172a; line-height: 1; letter-spacing: -0.04em; }
+    .plan-pro .plan-price, .plan-dark .plan-price { color: white; }
+    .plan-period { font-size: 12px; color: #94a3b8; margin-bottom: 28px; margin-top: 4px; }
+    .plan-pro .plan-period, .plan-dark .plan-period { color: rgba(255,255,255,0.4); }
+    .divider { border: none; border-top: 1px solid #f1f5f9; margin: 20px 0; }
+    .plan-pro .divider, .plan-dark .divider { border-color: rgba(255,255,255,0.12); }
+    .plan-feature { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; color: #334155; margin-bottom: 10px; }
+    .plan-pro .plan-feature, .plan-dark .plan-feature { color: rgba(255,255,255,0.82); }
+    .check { color: #22c55e; font-weight: 700; flex-shrink: 0; }
+    .plan-pro .check, .plan-dark .check { color: #38bdf8; }
+    .plan-btn { width: 100%; margin-top: 24px; background: #0f172a; border: none; color: white; border-radius: 10px; padding: 13px; font-size: 14px; cursor: pointer; font-weight: 700; text-align: center; display: block; text-decoration: none; }
+    .plan-btn-blue { background: #0ea5e9; }
+    /* Comparison table */
+    .comparison { margin-bottom: 64px; }
+    .comparison h2 { font-size: 24px; font-weight: 800; color: #0f172a; margin-bottom: 8px; letter-spacing: -0.03em; }
+    .comparison-sub { font-size: 14px; color: #64748b; margin-bottom: 32px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: #f8fafc; padding: 12px 16px; text-align: left; font-weight: 700; color: #475569; border-bottom: 2px solid #e2e8f0; }
+    th:not(:first-child) { text-align: center; }
+    td { padding: 13px 16px; border-bottom: 1px solid #f1f5f9; color: #334155; }
+    td:not(:first-child) { text-align: center; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f8fafc; }
+    .yes { color: #22c55e; font-size: 16px; font-weight: 700; }
+    .no  { color: #cbd5e1; font-size: 16px; }
+    /* FAQ */
+    .faq { margin-bottom: 48px; }
+    .faq h2 { font-size: 24px; font-weight: 800; color: #0f172a; margin-bottom: 32px; letter-spacing: -0.03em; }
+    .faq-item { border-bottom: 1px solid #e2e8f0; padding: 20px 0; }
+    .faq-q { font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 8px; }
+    .faq-a { font-size: 14px; color: #475569; }
+    /* CTA */
+    .cta-section { background: linear-gradient(135deg,#0f172a,#1d4ed8); border-radius: 20px; padding: 56px 40px; text-align: center; margin-bottom: 48px; }
+    .cta-section h2 { color: white; font-size: 24px; font-weight: 800; margin-bottom: 12px; }
+    .cta-section p { color: rgba(255,255,255,0.7); font-size: 15px; margin-bottom: 28px; }
+    .btn-primary { background: #0ea5e9; color: white; border-radius: 10px; padding: 14px 28px; font-size: 15px; font-weight: 700; text-decoration: none; display: inline-block; box-shadow: 0 4px 16px rgba(14,165,233,0.4); }
+    footer { background: #0f172a; padding: 28px 24px; text-align: center; }
+    .footer-logo { font-size: 18px; font-weight: 800; color: white; letter-spacing: -0.03em; }
+    .footer-logo span { color: #38bdf8; }
+    footer p { font-size: 12px; color: rgba(255,255,255,0.35); margin-top: 8px; }
+    footer a { color: rgba(255,255,255,0.45); font-size: 11px; text-decoration: underline; margin: 0 8px; }
+    @media (max-width: 960px) {
+      .pricing-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 760px) {
+      h1 { font-size: 26px; }
+      .pricing-grid { grid-template-columns: 1fr; }
+      table { font-size: 12px; }
+      th, td { padding: 10px 10px; }
+    }
+
+    @media (max-width: 640px) {
+      .nav-link { display: none; }
+      .nav-links { gap: 8px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="grad">
+    <a href="/" class="logo">Leav<span>up</span></a>
+    <div class="nav-links">
+      <a href="/fonctionnalites" class="nav-link">Fonctionnalités</a>
+      <a href="/tarifs" class="nav-link">Tarifs</a>
+      <a href="/comparatif" class="nav-link">Comparatif</a>
+      <a href="/vs-excel" class="nav-link">vs Excel</a>
+      <a href="/guide-conges-payes" class="nav-link">Guide légal</a>
+      <a href="/" class="nav-login">Se connecter</a>
+      <a href="/" class="nav-cta">Essai gratuit</a>
+    </div>
+  </nav>
+
+  <section class="hero grad">
+    <h1>Des tarifs simples, sans surprise</h1>
+    <p class="hero-sub">Pas de coût par utilisateur. Un forfait fixe selon la taille de votre équipe — gratuit pour commencer.</p>
+  </section>
+
+  <div class="pricing-section">
+
+    <!-- Plans -->
+    <div class="pricing-grid">
+      <div class="plan">
+        <div class="plan-name">Starter</div>
+        <div class="plan-audience">Jusqu'à 10 utilisateurs</div>
+        <div class="plan-price">0 €</div>
+        <div class="plan-period">gratuit pour toujours</div>
+        <hr class="divider" />
+        <div class="plan-feature"><span class="check">✓</span> 1 admin + 9 employés</div>
+        <div class="plan-feature"><span class="check">✓</span> Demandes de congés en ligne</div>
+        <div class="plan-feature"><span class="check">✓</span> Validation en un clic</div>
+        <div class="plan-feature"><span class="check">✓</span> Planning visuel</div>
+        <div class="plan-feature"><span class="check">✓</span> CP, RTT, sans solde</div>
+        <div class="plan-feature"><span class="check">✓</span> Notifications email</div>
+        <div class="plan-feature"><span class="check">✓</span> Calculs légaux automatiques</div>
+        <div class="plan-feature"><span class="check">✓</span> Hébergé en France · RGPD</div>
+        <a href="/" class="plan-btn">Démarrer gratuitement</a>
+      </div>
+
+      <div class="plan plan-pro">
+        <span class="plan-badge">Populaire</span>
+        <div class="plan-name">Teams</div>
+        <div class="plan-audience">Jusqu'à 30 utilisateurs</div>
+        <div class="plan-price">39 €</div>
+        <div class="plan-period">/mois HT — ou 31 €/mois en annuel</div>
+        <hr class="divider" />
+        <div class="plan-feature"><span class="check">✓</span> Tout le plan Starter</div>
+        <div class="plan-feature"><span class="check">✓</span> Équipes &amp; chefs d'équipe</div>
+        <div class="plan-feature"><span class="check">✓</span> Délégation de validation</div>
+        <div class="plan-feature"><span class="check">✓</span> Historique illimité</div>
+        <div class="plan-feature"><span class="check">✓</span> Export CSV des absences</div>
+        <div class="plan-feature"><span class="check">✓</span> Support email prioritaire</div>
+        <a href="mailto:contact@leavup.com?subject=Plan Teams Leavup" class="plan-btn plan-btn-blue">Nous contacter</a>
+      </div>
+
+      <div class="plan" style="border-color:#7c3aed22;background:linear-gradient(135deg,#faf5ff,#ede9fe);">
+        <div class="plan-name" style="color:#7c3aed;">Business</div>
+        <div class="plan-audience" style="color:#7c3aed;">Jusqu'à 50 utilisateurs</div>
+        <div class="plan-price" style="color:#6d28d9;">49 €</div>
+        <div class="plan-period">/mois HT — ou 39 €/mois en annuel</div>
+        <hr class="divider" />
+        <div class="plan-feature"><span class="check">✓</span> Tout le plan Teams</div>
+        <div class="plan-feature"><span class="check">✓</span> Jusqu'à 50 utilisateurs</div>
+        <div class="plan-feature"><span class="check">✓</span> Rapports avancés</div>
+        <div class="plan-feature"><span class="check">✓</span> Multi-équipes</div>
+        <div class="plan-feature"><span class="check">✓</span> Support téléphonique</div>
+        <a href="mailto:contact@leavup.com?subject=Plan Business Leavup" class="plan-btn" style="background:#7c3aed;">Nous contacter</a>
+      </div>
+
+      <div class="plan plan-dark">
+        <div class="plan-name">Enterprise</div>
+        <div class="plan-audience">50+ utilisateurs</div>
+        <div class="plan-price" style="font-size:28px;margin-top:6px;">Sur devis</div>
+        <div class="plan-period">contactez-nous</div>
+        <hr class="divider" />
+        <div class="plan-feature"><span class="check">✓</span> Tout le plan Business</div>
+        <div class="plan-feature"><span class="check">✓</span> Intégration SIRH</div>
+        <div class="plan-feature"><span class="check">✓</span> SSO / SAML</div>
+        <div class="plan-feature"><span class="check">✓</span> Hébergement dédié</div>
+        <div class="plan-feature"><span class="check">✓</span> Onboarding accompagné</div>
+        <div class="plan-feature"><span class="check">✓</span> Contrat de service sur-mesure</div>
+        <a href="mailto:contact@leavup.com?subject=Plan Enterprise Leavup" class="plan-btn plan-btn-blue">Nous contacter</a>
+      </div>
+    </div>
+
+    <!-- Tableau comparatif -->
+    <div class="comparison">
+      <h2>Comparaison détaillée des plans</h2>
+      <p class="comparison-sub">Toutes les fonctionnalités incluses dans chaque plan, sans option cachée.</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Fonctionnalité</th>
+            <th>Starter<br><span style="font-weight:400;font-size:11px;">Gratuit</span></th>
+            <th>Teams<br><span style="font-weight:400;font-size:11px;">39 €/mois</span></th>
+            <th>Business<br><span style="font-weight:400;font-size:11px;">49 €/mois</span></th>
+            <th>Enterprise<br><span style="font-weight:400;font-size:11px;">Sur devis</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Utilisateurs max</td><td>10</td><td>30</td><td>50</td><td>Illimité</td></tr>
+          <tr><td>Demandes de congés en ligne</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+          <tr><td>Congés payés (CP) &amp; RTT</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+          <tr><td>Congés sans solde</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+          <tr><td>Demi-journées</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+          <tr><td>Calculs légaux automatiques</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+          <tr><td>Planning visuel d'équipe</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+          <tr><td>Notifications email</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+          <tr><td>Hébergement France &amp; RGPD</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+          <tr><td>Équipes &amp; chefs d'équipe</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+          <tr><td>Export CSV</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+          <tr><td>Support email prioritaire</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+          <tr><td>Rapports avancés</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+          <tr><td>Support téléphonique</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+          <tr><td>Intégration SIRH</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td></tr>
+          <tr><td>SSO / SAML</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td></tr>
+          <tr><td>Hébergement dédié</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- FAQ -->
+    <div class="faq">
+      <h2>Questions fréquentes sur les tarifs</h2>
+      <div class="faq-item">
+        <div class="faq-q">Leavup est-il vraiment gratuit ?</div>
+        <p class="faq-a">Oui, le plan Starter est gratuit sans limite de durée pour 1 administrateur et jusqu'à 9 employés (10 utilisateurs au total). Aucune carte bancaire n'est requise pour créer votre organisation.</p>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Que se passe-t-il si mon équipe dépasse 10 utilisateurs ?</div>
+        <p class="faq-a">Vous serez prévenu avant d'atteindre la limite. Vous pourrez passer au plan Teams (jusqu'à 30 utilisateurs, 39 €/mois HT), au plan Business (jusqu'à 50 utilisateurs, 49 €/mois HT) ou au plan Enterprise pour les équipes de 50+ personnes (sur devis). Vos données sont toujours conservées.</p>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Puis-je annuler à tout moment ?</div>
+        <p class="faq-a">Oui, sans engagement. Vous pouvez rétrograder au plan gratuit ou supprimer votre compte à tout moment depuis les paramètres de l'organisation. Vos données peuvent être exportées avant suppression.</p>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Y a-t-il une réduction pour la facturation annuelle ?</div>
+        <p class="faq-a">Oui, le plan Teams revient à 31 €/mois HT avec une facturation annuelle, soit une économie de 20 % par rapport à la facturation mensuelle (39 €/mois).</p>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Leavup est-il moins cher que les alternatives ?</div>
+        <p class="faq-a">La plupart des logiciels de gestion des congés facturent entre 2 € et 8 € par utilisateur et par mois. Avec Leavup, vous payez un forfait fixe quelle que soit la taille de votre équipe dans la limite du plan — ce qui est souvent beaucoup moins cher pour les PME de 10 à 30 personnes.</p>
+      </div>
+    </div>
+
+    <!-- CTA -->
+    <div class="cta-section">
+      <h2>Commencez gratuitement dès aujourd'hui</h2>
+      <p>Aucune carte bancaire. Aucun engagement. Votre équipe opérationnelle en 2 minutes.</p>
+      <a href="/" class="btn-primary">Créer mon organisation →</a>
+    </div>
+
+  </div>
+
+  <footer>
+    <div class="footer-logo">Leav<span>up</span></div>
+    <p style="margin-top:10px;display:flex;flex-wrap:wrap;justify-content:center;gap:6px 20px;">
+      <a href="/">Accueil</a>
+      <a href="/fonctionnalites">Fonctionnalités</a>
+      <a href="/tarifs">Tarifs</a>
+      <a href="/comparatif">Comparatif</a>
+      <a href="/vs-excel">vs Excel</a>
+      <a href="/guide-conges-payes">Guide légal</a>
+      <a href="/mentions-legales">Mentions légales</a>
+      <a href="/privacy">Confidentialité</a>
+    </p>
+    <p>© 2026 Leavup — Logiciel de gestion des congés pour PME françaises</p>
+  </footer>
+
+</body>
+</html>

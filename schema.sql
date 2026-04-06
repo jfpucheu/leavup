@@ -2,7 +2,7 @@
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- ── Organisations ──────────────────────────────────────────────────────────
-CREATE TABLE organizations (
+CREATE TABLE IF NOT EXISTS organizations (
   id               UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   name             TEXT        NOT NULL,
   slug             TEXT        UNIQUE NOT NULL,
@@ -11,7 +11,7 @@ CREATE TABLE organizations (
 );
 
 -- ── Utilisateurs ───────────────────────────────────────────────────────────
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
   id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   org_id        UUID        NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   identifier    TEXT        NOT NULL,          -- ex: EMP001, identifiant de connexion
@@ -24,7 +24,7 @@ CREATE TABLE users (
 );
 
 -- ── Demandes de congé ──────────────────────────────────────────────────────
-CREATE TABLE leave_requests (
+CREATE TABLE IF NOT EXISTS leave_requests (
   id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   org_id        UUID        NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   user_id       UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -39,11 +39,11 @@ CREATE TABLE leave_requests (
 );
 
 -- ── Index ──────────────────────────────────────────────────────────────────
-CREATE INDEX idx_users_org        ON users(org_id);
-CREATE INDEX idx_leaves_org       ON leave_requests(org_id);
-CREATE INDEX idx_leaves_user      ON leave_requests(user_id);
-CREATE INDEX idx_leaves_status    ON leave_requests(status);
-CREATE INDEX idx_leaves_dates     ON leave_requests(start_date, end_date);
+CREATE INDEX IF NOT EXISTS idx_users_org        ON users(org_id);
+CREATE INDEX IF NOT EXISTS idx_leaves_org       ON leave_requests(org_id);
+CREATE INDEX IF NOT EXISTS idx_leaves_user      ON leave_requests(user_id);
+CREATE INDEX IF NOT EXISTS idx_leaves_status    ON leave_requests(status);
+CREATE INDEX IF NOT EXISTS idx_leaves_dates     ON leave_requests(start_date, end_date);
 
 -- ── Extensions champs organisations ────────────────────────────────────────
 ALTER TABLE organizations ADD COLUMN IF NOT EXISTS siret            TEXT;
@@ -57,7 +57,7 @@ ALTER TABLE organizations ADD COLUMN IF NOT EXISTS contact_email     TEXT;
 ALTER TABLE organizations ADD COLUMN IF NOT EXISTS logo_data         TEXT; -- base64 data URL
 
 -- ── Contrats ────────────────────────────────────────────────────────────────
-CREATE TABLE contracts (
+CREATE TABLE IF NOT EXISTS contracts (
   id             UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   org_id         UUID        NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   name           TEXT        NOT NULL,
@@ -67,7 +67,7 @@ CREATE TABLE contracts (
   rtt_per_month  NUMERIC(4,2) NOT NULL DEFAULT 0,
   created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE INDEX idx_contracts_org ON contracts(org_id);
+CREATE INDEX IF NOT EXISTS idx_contracts_org ON contracts(org_id);
 
 -- ── Extensions champs utilisateurs ─────────────────────────────────────────
 -- annual_days fixé à 30 (2.5j × 12 mois) — règle légale française non modifiable
@@ -93,7 +93,14 @@ ALTER TABLE organizations ADD COLUMN IF NOT EXISTS contact_phone TEXT;
 ALTER TABLE organizations ADD COLUMN IF NOT EXISTS allow_unpaid_leave          BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE organizations ADD COLUMN IF NOT EXISTS allow_unpaid_when_exhausted BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS leave_type TEXT NOT NULL DEFAULT 'paid'
-  CHECK (leave_type IN ('paid', 'unpaid', 'rtt'));
+  CHECK (leave_type IN ('paid', 'unpaid', 'rtt', 'remote'));
+
+-- Migration : élargir la contrainte si elle existe déjà avec l'ancienne liste
+DO $$ BEGIN
+  ALTER TABLE leave_requests DROP CONSTRAINT IF EXISTS leave_requests_leave_type_check;
+  ALTER TABLE leave_requests ADD CONSTRAINT leave_requests_leave_type_check
+    CHECK (leave_type IN ('paid', 'unpaid', 'rtt', 'remote'));
+EXCEPTION WHEN others THEN NULL; END $$;
 ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS period TEXT NOT NULL DEFAULT 'full'
   CHECK (period IN ('full', 'am', 'pm'));
 
@@ -129,6 +136,13 @@ ALTER TABLE organizations ADD COLUMN IF NOT EXISTS notify_admin_new  BOOLEAN NOT
 -- free : 1 admin + 4 employés (5 max) — pro : illimité (activé par superadmin)
 ALTER TABLE organizations ADD COLUMN IF NOT EXISTS plan TEXT NOT NULL DEFAULT 'free' CHECK (plan IN ('free', 'pro'));
 
+-- Migration : élargir les valeurs autorisées pour les nouveaux plans
+DO $$ BEGIN
+  ALTER TABLE organizations DROP CONSTRAINT IF EXISTS organizations_plan_check;
+  ALTER TABLE organizations ADD CONSTRAINT organizations_plan_check
+    CHECK (plan IN ('free', 'team', 'business', 'enterprise'));
+EXCEPTION WHEN others THEN NULL; END $$;
+
 -- ── Période de référence des congés ─────────────────────────────────────────
 -- civil     : 1er janvier → 31 décembre
 -- reference : 1er juin    → 31 mai (période légale française)
@@ -140,6 +154,49 @@ ALTER TABLE organizations ADD COLUMN IF NOT EXISTS leave_period TEXT NOT NULL DE
 -- advance     : tous les jours sont crédités dès le début de la période
 ALTER TABLE organizations ADD COLUMN IF NOT EXISTS leave_grant_mode TEXT NOT NULL DEFAULT 'progressive'
   CHECK (leave_grant_mode IN ('progressive', 'advance'));
+
+-- ── Token de calendrier personnel (abonnement .ics) ─────────────────────────
+ALTER TABLE users ADD COLUMN IF NOT EXISTS calendar_token UUID NOT NULL DEFAULT gen_random_uuid();
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_calendar_token ON users(calendar_token);
+
+-- ── Type de décompte des jours de congés ─────────────────────────────────────
+-- ouvre    : lundi–vendredi hors jours fériés (25 jours/an)
+-- ouvrable : lundi–samedi  hors jours fériés et dimanches (30 jours/an)
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS day_count_type TEXT NOT NULL DEFAULT 'ouvre'
+  CHECK (day_count_type IN ('ouvre', 'ouvrable'));
+
+-- ── Limites de télétravail par organisation ───────────────────────────────────
+-- -1 = illimité ; > 0 = nombre max de jours autorisés
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS remote_max_per_week  INT NOT NULL DEFAULT -1;
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS remote_max_per_month INT NOT NULL DEFAULT -1;
+
+-- ── Report de jours non pris (carry-over) ────────────────────────────────────
+-- cp_carryover_max     : 0 = désactivé, -1 = illimité, n = nb jours max reportés
+-- cp_carryover_expires : mois avant expiration des jours reportés (0 = jamais)
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS cp_carryover_max      INT NOT NULL DEFAULT 0;
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS cp_carryover_expires  INT NOT NULL DEFAULT 12;
+
+-- ── Événements familiaux (Art. L3142-1) ──────────────────────────────────────
+CREATE TABLE IF NOT EXISTS family_event_types (
+  id        UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id    UUID        NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  event_key TEXT        NOT NULL,
+  label     TEXT        NOT NULL,
+  days      NUMERIC(4,1) NOT NULL,
+  active    BOOLEAN     NOT NULL DEFAULT true,
+  UNIQUE(org_id, event_key)
+);
+CREATE INDEX IF NOT EXISTS idx_family_events_org ON family_event_types(org_id);
+
+-- Clé d'événement sur les demandes (non nulle uniquement si leave_type = 'event')
+ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS event_key TEXT;
+
+-- Élargir le CHECK leave_type pour inclure 'event'
+DO $$ BEGIN
+  ALTER TABLE leave_requests DROP CONSTRAINT IF EXISTS leave_requests_leave_type_check;
+  ALTER TABLE leave_requests ADD CONSTRAINT leave_requests_leave_type_check
+    CHECK (leave_type IN ('paid', 'unpaid', 'rtt', 'remote', 'event'));
+EXCEPTION WHEN others THEN NULL; END $$;
 
 -- ── Équipes ─────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS teams (
@@ -161,3 +218,6 @@ CREATE TABLE IF NOT EXISTS platform_settings (
   key   TEXT PRIMARY KEY,
   value TEXT
 );
+
+-- ── RGPD : date de consentement ─────────────────────────────────────────────
+ALTER TABLE users ADD COLUMN IF NOT EXISTS consent_date TIMESTAMPTZ;
